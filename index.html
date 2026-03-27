@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <!-- Ajuste estricto de Viewport para móviles -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SGX Interactive Engine | Spatial Computing</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Import map para Three.js -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+        }
+      }
+    </script>
+
+    <!-- MediaPipe Hands & Camera Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    
+    <!-- GSAP para Cinemáticas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        /* SGX Brand Colors & Theme (Del archivo SGX Vision) */
+        :root {
+            --sgx-blue: #32527B;
+            --sgx-yellow: #FDCC0D;
+            --sgx-copper: #B87333;
+            --sgx-dark: #111111;
+        }
+        
+        body { margin: 0; overflow: hidden; background-color: var(--sgx-dark); color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; touch-action: none; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        
+        /* Feed Webcam: ATRIBUTO MUTED ES OBLIGATORIO PARA AUTOPLAY EN MÓVILES */
+        #webcam-feed { position: absolute; bottom: 20px; right: 20px; width: 140px; height: 105px; border-radius: 12px; border: 2px solid rgba(253, 204, 13, 0.4); z-index: 10; transform: scaleX(-1); background: #000; object-fit: cover; opacity: 0.6; transition: opacity 0.3s; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        #webcam-feed:hover { opacity: 1; }
+        
+        /* Cursor SVG / CSS Dinámico */
+        #cursor-overlay { position: absolute; top: 50%; left: 50%; width: 12px; height: 12px; background: rgba(255, 255, 255, 0.5); border: 2px solid white; border-radius: 50%; pointer-events: none; z-index: 50; transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, background-color 0.2s, border-color 0.2s; box-shadow: 0 0 10px rgba(0,0,0,0.5); display: none; }
+        #cursor-overlay.tracking { display: block; }
+        #cursor-overlay.pointing { width: 24px; height: 24px; background: rgba(253, 204, 13, 0.8); border-color: #fff; box-shadow: 0 0 15px var(--sgx-yellow); }
+        #cursor-overlay.pinching { width: 16px; height: 16px; background: rgba(184, 115, 51, 0.9); border-color: #fff; box-shadow: 0 0 15px var(--sgx-copper); }
+        #cursor-overlay.open-hand { width: 32px; height: 32px; background: rgba(50, 82, 123, 0.6); border-color: rgba(255,255,255,0.8); border-radius: 8px; box-shadow: 0 0 15px var(--sgx-blue); }
+        
+        /* Estilos Glassmorphism Premium */
+        .glass-panel { background: rgba(17, 17, 17, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(50, 82, 123, 0.4); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7); }
+        
+        /* SGX Loader */
+        .loader {
+            border: 4px solid rgba(253, 204, 13, 0.2);
+            border-left-color: var(--sgx-yellow);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- Pantalla de Carga SGX (Se oculta al sincronizar IA + 3D) -->
+    <div id="loadingScreen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#111111] transition-opacity duration-500">
+        <div class="loader mb-6"></div>
+        <h1 class="text-3xl font-black tracking-widest text-[#FDCC0D]">SGX<span class="text-white">.ENGINE</span></h1>
+        <p id="loading-text-sub" class="text-[#888888] mt-3 font-mono text-xs uppercase tracking-widest text-center max-w-xs">Solicitando permisos de cámara...<br>Por favor, acepta para continuar.</p>
+    </div>
+
+    <!-- Botón Info -->
+    <button id="btn-info" class="absolute top-6 right-6 z-20 w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:bg-[#32527B] transition cursor-pointer shadow-lg pointer-events-auto">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+        </svg>
+    </button>
+
+    <!-- Botón Guardar Vista -->
+    <div class="absolute bottom-10 left-0 w-full flex justify-center z-20 pointer-events-none">
+        <button id="btn-save-view" class="glass-panel px-6 py-3 rounded-full text-[#FDCC0D] font-bold tracking-wider hover:bg-[#FDCC0D] hover:text-black border border-[#FDCC0D] transition pointer-events-auto flex items-center space-x-2 shadow-[0_0_15px_rgba(253,204,13,0.3)] active:scale-95 touch-manipulation">
+            <span class="text-xl">📍</span>
+            <span>Guardar Vista</span>
+        </button>
+    </div>
+
+    <!-- Guía Gestos -->
+    <div id="gesture-guide" class="absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300 px-4">
+        <div class="glass-panel p-6 rounded-2xl max-w-md w-full shadow-2xl transform scale-95 transition-transform duration-300" id="gesture-guide-content">
+            <h2 class="text-2xl font-bold text-[#FDCC0D] mb-4 text-center tracking-wide">Guía de Gestos</h2>
+            <div class="space-y-3">
+                <div class="flex items-start space-x-4 p-3 bg-white/5 rounded-xl border border-white/10">
+                    <span class="text-3xl mt-1">☝️</span>
+                    <div><p class="font-bold text-white">Apuntar</p><p class="text-sm text-gray-400 leading-tight">Índice extendido para interactuar y volar hacia los Hotspots.</p></div>
+                </div>
+                <div class="flex items-start space-x-4 p-3 bg-white/5 rounded-xl border border-white/10">
+                    <span class="text-3xl mt-1">🤏</span>
+                    <div><p class="font-bold text-white">Pellizco</p><p class="text-sm text-gray-400 leading-tight">Junta índice y pulgar para rotar el modelo libremente.</p></div>
+                </div>
+                <div class="flex items-start space-x-4 p-3 bg-white/5 rounded-xl border border-white/10">
+                    <span class="text-3xl mt-1">🖐️</span>
+                    <div><p class="font-bold text-white">Mano Abierta</p><p class="text-sm text-gray-400 leading-tight">Mueve para desplazar la cámara. Empuja hacia la pantalla para resetear.</p></div>
+                </div>
+                <div class="flex items-start space-x-4 p-3 bg-white/5 rounded-xl border border-white/10">
+                    <span class="text-3xl mt-1">🙌</span>
+                    <div><p class="font-bold text-white">Doble Pinch</p><p class="text-sm text-gray-400 leading-tight">Pellizco con ambas manos; acerca/aleja para hacer Zoom.</p></div>
+                </div>
+            </div>
+            <button id="btn-close-info" class="mt-6 py-3 bg-[#FDCC0D] text-black font-bold rounded-xl hover:bg-yellow-400 transition w-full shadow-[0_0_15px_rgba(253,204,13,0.5)] pointer-events-auto">
+                Entendido
+            </button>
+        </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="ui-layer" class="absolute top-6 left-6 glass-panel p-4 rounded-xl z-10 pointer-events-none border-l-4 border-l-[#FDCC0D]">
+        <h1 class="text-xl font-black text-[#FDCC0D] tracking-widest drop-shadow-md">SGX VISION</h1>
+        <div class="mt-3 text-xs font-mono text-gray-300 space-y-2">
+            <p class="flex justify-between w-48 border-b border-[#32527B] pb-1"><span>Motor 3D:</span> <span id="status-3d" class="text-white font-bold">Cargando...</span></p>
+            <p class="flex justify-between w-48 border-b border-[#32527B] pb-1"><span>Cámara:</span> <span id="status-cam" class="text-[#FDCC0D] font-bold">Iniciando...</span></p>
+            <p class="flex justify-between w-48"><span>Gesto Activo:</span> <span id="gesture-text" class="text-white font-bold">Inactivo</span></p>
+        </div>
+    </div>
+
+    <div id="cursor-overlay"></div>
+    <video id="webcam-feed" autoplay playsinline muted></video>
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        const SGX_CONFIG = {
+            model_path: "https://static.wixstatic.com/3d/fe81a7_cf1ed4e58d0048efa955f39d347a9466.glb",
+            initial_camera_pos: { x: 0, y: 1.5, z: 4.5 },
+            lerp_factor: 0.4, 
+            pinch_threshold: 0.06
+        };
+
+        // DOM Elements
+        const uiStatus3D = document.getElementById('status-3d');
+        const uiStatusCam = document.getElementById('status-cam');
+        const uiGesture = document.getElementById('gesture-text');
+        const modalGuide = document.getElementById('gesture-guide');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loadingTextSub = document.getElementById('loading-text-sub');
+
+        // Estado Global de Carga
+        const EngineState = {
+            cameraReady: false,
+            modelReady: false,
+            checkReady: function() {
+                if (this.cameraReady && this.modelReady) {
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(() => { loadingScreen.style.display = 'none'; }, 500);
+                }
+            }
+        };
+
+        // Modal Logic
+        document.getElementById('btn-info').addEventListener('click', () => {
+            modalGuide.classList.replace('opacity-0', 'opacity-100');
+            modalGuide.classList.replace('pointer-events-none', 'pointer-events-auto');
+            document.getElementById('gesture-guide-content').classList.replace('scale-95', 'scale-100');
+        });
+        document.getElementById('btn-close-info').addEventListener('click', () => {
+            modalGuide.classList.replace('opacity-100', 'opacity-0');
+            modalGuide.classList.replace('pointer-events-auto', 'pointer-events-none');
+            document.getElementById('gesture-guide-content').classList.replace('scale-100', 'scale-95');
+        });
+
+        // ==========================================
+        // UTILIDADES MATEMÁTICAS
+        // ==========================================
+        class MathUtils {
+            static distanceEuclidean(p1, p2) { return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2) + Math.pow(p1.z - p2.z, 2)); }
+            static lerp(start, end, amt) { return (1 - amt) * start + amt * end; }
+            static averageLandmarks(historyArray) {
+                const avg = []; const len = historyArray.length;
+                for (let i = 0; i < 21; i++) {
+                    let sumX = 0, sumY = 0, sumZ = 0;
+                    for (let j = 0; j < len; j++) { sumX += historyArray[j][i].x; sumY += historyArray[j][i].y; sumZ += historyArray[j][i].z; }
+                    avg.push({ x: sumX / len, y: sumY / len, z: sumZ / len });
+                }
+                return avg;
+            }
+        }
+
+        // ==========================================
+        // GESTOR DE CURSOR
+        // ==========================================
+        class CursorManager {
+            constructor() {
+                this.element = document.getElementById('cursor-overlay');
+                this.targetX = window.innerWidth / 2; this.targetY = window.innerHeight / 2;
+                this.currentX = this.targetX; this.currentY = this.targetY;
+                this.update();
+            }
+            setTarget(normalizedX, normalizedY) {
+                this.targetX = normalizedX * window.innerWidth;
+                this.targetY = normalizedY * window.innerHeight;
+            }
+            setState(state) {
+                this.element.className = 'tracking'; 
+                if(state) this.element.classList.add(state);
+            }
+            hide() { this.element.className = ''; }
+            update() {
+                this.currentX = MathUtils.lerp(this.currentX, this.targetX, 0.2);
+                this.currentY = MathUtils.lerp(this.currentY, this.targetY, 0.2);
+                this.element.style.left = `${this.currentX}px`; this.element.style.top = `${this.currentY}px`;
+                requestAnimationFrame(this.update.bind(this));
+            }
+        }
+        const cursorManager = new CursorManager();
+
+        // ==========================================
+        // MOTOR DE GESTOS (AUTO INIT SEGURO)
+        // ==========================================
+        class GestureController {
+            constructor(videoElement, onGestureUpdate) {
+                this.videoElement = videoElement;
+                this.onGestureUpdate = onGestureUpdate;
+                this.historyBuffer = []; 
+                this.isInputBlocked = false; 
+                this.prevPinchDist = null; this.prevHandCenter = null; this.prevZ = null;
+                
+                this.initMediaPipe();
+            }
+
+            blockInput(state) { this.isInputBlocked = state; }
+
+            initMediaPipe() {
+                const hands = new Hands({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}` });
+                hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+                hands.onResults(this.processResults.bind(this));
+
+                // Implementación extraída de SGX Vision: Delega la petición a Camera Utils
+                const cameraFeed = new Camera(this.videoElement, {
+                    onFrame: async () => { await hands.send({ image: this.videoElement }); },
+                    width: 640, height: 480
+                });
+
+                cameraFeed.start()
+                    .then(() => {
+                        uiStatusCam.innerText = "En Línea"; 
+                        uiStatusCam.classList.replace('text-[#FDCC0D]', 'text-green-400');
+                        loadingTextSub.innerHTML = "Permisos concedidos.<br>Sincronizando malla tridimensional...";
+                        // La IA tarda un par de frames en estabilizarse, marcamos listo pronto
+                        setTimeout(() => { EngineState.cameraReady = true; EngineState.checkReady(); }, 1000);
+                    })
+                    .catch(err => {
+                        console.error("Error de cámara: ", err);
+                        uiStatusCam.innerText = "Denegada"; 
+                        uiStatusCam.classList.replace('text-[#FDCC0D]', 'text-red-500');
+                        loadingTextSub.innerHTML = "<span class='text-red-500'>Error: Permite el acceso a la cámara para operar el SGX Tracker.</span>";
+                    });
+            }
+
+            processResults(results) {
+                if (this.isInputBlocked) return;
+                
+                if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                    this.historyBuffer = []; this.prevHandCenter = null; this.prevPinchDist = null; this.prevZ = null;
+                    this.onGestureUpdate({ type: "IDLE" }); return;
+                }
+
+                // Buffer anti-jitter
+                this.historyBuffer.push(results.multiHandLandmarks[0]);
+                if (this.historyBuffer.length > 5) this.historyBuffer.shift();
+                this.detectGestures(MathUtils.averageLandmarks(this.historyBuffer), results.multiHandLandmarks);
+            }
+
+            detectGestures(primaryHand, allRawHands) {
+                const indexTip = primaryHand[8];
+                const rawX = 1 - indexTip.x; const rawY = indexTip.y;
+                const glX = (rawX * 2) - 1; const glY = -(rawY * 2) + 1;
+
+                const pinchDist = MathUtils.distanceEuclidean(primaryHand[4], indexTip);
+                
+                if (allRawHands.length === 2) {
+                    const pinchDist2 = MathUtils.distanceEuclidean(allRawHands[1][4], allRawHands[1][8]);
+                    if (pinchDist < SGX_CONFIG.pinch_threshold && pinchDist2 < SGX_CONFIG.pinch_threshold) {
+                        const distHands = MathUtils.distanceEuclidean(indexTip, allRawHands[1][8]);
+                        let deltaZoom = this.prevPinchDist !== null ? distHands - this.prevPinchDist : 0;
+                        this.prevPinchDist = distHands;
+                        this.onGestureUpdate({ type: "DOUBLE_PINCH", deltaZoom, rawX, rawY });
+                        return;
+                    }
+                }
+                this.prevPinchDist = null;
+
+                if (pinchDist < SGX_CONFIG.pinch_threshold) {
+                    let deltaX = 0, deltaY = 0;
+                    if (this.prevHandCenter !== null) {
+                        deltaX = -(primaryHand[9].x - this.prevHandCenter.x);
+                        deltaY = (primaryHand[9].y - this.prevHandCenter.y);
+                    }
+                    this.prevHandCenter = primaryHand[9];
+                    this.onGestureUpdate({ type: "PINCH", deltaX, deltaY, rawX, rawY });
+                    return;
+                }
+                this.prevHandCenter = null;
+
+                const isIndexExt = indexTip.y < primaryHand[6].y;
+                const isMiddleFold = primaryHand[12].y > primaryHand[10].y;
+                const isRingFold = primaryHand[16].y > primaryHand[14].y;
+
+                if (isIndexExt && isMiddleFold && isRingFold) {
+                    this.onGestureUpdate({ type: "POINT", glX, glY, rawX, rawY }); return;
+                }
+
+                const isOpen = isIndexExt && !isMiddleFold && !isRingFold && (primaryHand[20].y < primaryHand[18].y);
+                if (isOpen) {
+                    let zVel = this.prevZ !== null ? primaryHand[9].z - this.prevZ : 0;
+                    this.prevZ = primaryHand[9].z;
+                    let dX = 0, dY = 0;
+                    if (this.prevHandCenter !== null) {
+                        dX = -(primaryHand[9].x - this.prevHandCenter.x); dY = (primaryHand[9].y - this.prevHandCenter.y);
+                    }
+                    this.prevHandCenter = primaryHand[9];
+
+                    if (zVel < -0.05) this.onGestureUpdate({ type: "PUSH", rawX, rawY });
+                    else this.onGestureUpdate({ type: "OPEN_HAND", deltaX: dX, deltaY: dY, rawX, rawY });
+                    return;
+                }
+
+                this.onGestureUpdate({ type: "TRACKING", rawX, rawY });
+            }
+        }
+
+        // ==========================================
+        // MOTOR 3D Y HOTSPOTS
+        // ==========================================
+        class SceneManager {
+            constructor(containerId) {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x050505);
+                this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(SGX_CONFIG.initial_camera_pos.x, SGX_CONFIG.initial_camera_pos.y, SGX_CONFIG.initial_camera_pos.z);
+                
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                document.getElementById(containerId).appendChild(this.renderer.domElement);
+
+                this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true; this.controls.dampingFactor = 0.05;
+
+                this.raycaster = new THREE.Raycaster();
+                this.hotspots = [];
+                this.modelWrapper = new THREE.Group(); 
+                this.scene.add(this.modelWrapper);
+
+                this.setupLighting();
+                this.loadModel();
+
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+            }
+
+            setupLighting() {
+                this.scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+                const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+                dirLight.position.set(5, 10, 7);
+                this.scene.add(dirLight);
+                const fillLight = new THREE.DirectionalLight(0x32527b, 1.5); 
+                fillLight.position.set(-5, 0, -5);
+                this.scene.add(fillLight);
+            }
+
+            loadModel() {
+                const manager = new THREE.LoadingManager();
+                manager.onProgress = (url, itemsLoaded, itemsTotal) => {
+                    uiStatus3D.innerText = `${Math.round((itemsLoaded / itemsTotal) * 100)}%`;
+                };
+                manager.onLoad = () => {
+                    uiStatus3D.innerText = "Completado";
+                    uiStatus3D.classList.add('text-green-400');
+                    this.createBaseHotspots();
+                    
+                    // Notificar al estado global que el 3D está listo
+                    EngineState.modelReady = true;
+                    EngineState.checkReady();
+                };
+                manager.onError = (url) => {
+                    uiStatus3D.innerText = "Error Red";
+                    uiStatus3D.classList.add('text-red-500');
+                    console.error("No se pudo cargar el modelo:", url);
+                };
+
+                const loader = new GLTFLoader(manager);
+                loader.load(SGX_CONFIG.model_path, (gltf) => {
+                    const model = gltf.scene;
+                    const box = new THREE.Box3().setFromObject(model);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    const targetScale = 3.5 / Math.max(size.x, size.y, size.z);
+                    
+                    model.scale.set(targetScale, targetScale, targetScale);
+                    model.position.sub(center.multiplyScalar(targetScale));
+                    this.modelWrapper.add(model);
+                });
+            }
+
+            createBaseHotspots() {
+                this.createHotspotMesh(new THREE.Vector3(0, 0.5, 1.5), {
+                    id: "Inicio", camera_pos: new THREE.Vector3(0, 1.0, 3.0),
+                    target: new THREE.Vector3(0, 0.5, 1.5), model_rotation: new THREE.Euler(0,0,0)
+                }, 0xfdcc0d);
+            }
+
+            createHotspotMesh(position, userData, colorHex) {
+                const geometry = new THREE.SphereGeometry(0.12, 32, 32);
+                const material = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.6, wireframe: true });
+                const mesh = new THREE.Mesh(geometry, material);
+                
+                // Hitbox invisible (Touch targets más grandes)
+                const hitbox = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshBasicMaterial({visible: false}));
+                mesh.add(hitbox);
+
+                mesh.position.copy(position);
+                mesh.userData = userData;
+                this.modelWrapper.add(mesh);
+                this.hotspots.push(mesh);
+                return mesh;
+            }
+
+            addDynamicHotspot() {
+                this.raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
+                const intersects = this.raycaster.intersectObject(this.modelWrapper, true);
+                
+                let hitPointLocal = new THREE.Vector3();
+                if (intersects.length > 0) {
+                    hitPointLocal.copy(intersects[0].point);
+                    this.modelWrapper.worldToLocal(hitPointLocal);
+                } else {
+                    hitPointLocal.copy(this.controls.target);
+                    this.modelWrapper.worldToLocal(hitPointLocal);
+                }
+
+                const userData = { 
+                    id: `Vista_${this.hotspots.length + 1}`,
+                    camera_pos: this.camera.position.clone(),
+                    target: this.controls.target.clone(),
+                    model_rotation: this.modelWrapper.rotation.clone()
+                };
+
+                const mesh = this.createHotspotMesh(hitPointLocal, userData, 0x00e5ff); // SGX Cyan
+                gsap.from(mesh.scale, {x: 0, y: 0, z: 0, duration: 0.6, ease: "back.out(2)"});
+                return userData.id;
+            }
+
+            checkIntersections(x, y) {
+                this.raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
+                const intersects = this.raycaster.intersectObjects(this.hotspots, true); 
+                
+                this.hotspots.forEach(h => h.material.opacity = 0.5);
+                if (intersects.length > 0) {
+                    let hitObject = intersects[0].object;
+                    if(hitObject.parent && hitObject.parent.userData.id) hitObject = hitObject.parent;
+                    hitObject.material.opacity = 1.0;
+                    return hitObject.userData; 
+                }
+                return null;
+            }
+
+            resetCamera() {
+                gsap.to(this.camera.position, { x: SGX_CONFIG.initial_camera_pos.x, y: SGX_CONFIG.initial_camera_pos.y, z: SGX_CONFIG.initial_camera_pos.z, duration: 1.0, ease: "power2.out" });
+                gsap.to(this.controls.target, { x: 0, y: 0, z: 0, duration: 1.0, ease: "power2.out" });
+            }
+            render() { this.controls.update(); this.renderer.render(this.scene, this.camera); }
+        }
+
+        // ==========================================
+        // CINEMÁTICA Y EVENTOS GLOBALES
+        // ==========================================
+        class CinematicEngine {
+            constructor(camera, controls, sceneManager) {
+                this.camera = camera; this.controls = controls; this.sceneManager = sceneManager;
+                this.isAnimating = false;
+            }
+            flyToTarget(userData, onCompleteCallback) {
+                if (this.isAnimating) return;
+                this.isAnimating = true;
+                gsap.to(this.camera.position, { x: userData.camera_pos.x, y: userData.camera_pos.y, z: userData.camera_pos.z, duration: 1.5, ease: "power3.inOut" });
+                gsap.to(this.controls.target, { x: userData.target.x, y: userData.target.y, z: userData.target.z, duration: 1.5, ease: "power3.inOut" });
+                gsap.to(this.sceneManager.modelWrapper.rotation, {
+                    x: userData.model_rotation.x, y: userData.model_rotation.y, z: userData.model_rotation.z,
+                    duration: 1.5, ease: "power3.inOut", onComplete: () => { this.isAnimating = false; if (onCompleteCallback) onCompleteCallback(); }
+                });
+            }
+        }
+
+        const sceneManager = new SceneManager('canvas-container');
+        const cinematics = new CinematicEngine(sceneManager.camera, sceneManager.controls, sceneManager);
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            sceneManager.render();
+            if(sceneManager.modelWrapper && !gestureController.isInputBlocked && uiGesture.innerText === "Inactivo") {
+                 sceneManager.modelWrapper.rotation.y += 0.001;
+            }
+        }
+        animate();
+
+        // Control maestro de Gestos
+        const handleGesture = (event) => {
+            if (cinematics.isAnimating) return; 
+            if(event.rawX !== undefined) cursorManager.setTarget(event.rawX, event.rawY);
+
+            switch(event.type) {
+                case "PINCH":
+                    uiGesture.innerText = "Rotando"; cursorManager.setState('pinching');
+                    if (sceneManager.modelWrapper) {
+                        sceneManager.modelWrapper.rotation.y += event.deltaX * 4.0;
+                        sceneManager.modelWrapper.rotation.x += event.deltaY * 4.0;
+                    }
+                    break;
+                case "DOUBLE_PINCH":
+                    uiGesture.innerText = "Zoom"; cursorManager.setState('pinching');
+                    sceneManager.camera.position.z += event.deltaZoom * 20.0;
+                    break;
+                case "OPEN_HAND":
+                    uiGesture.innerText = "Moviendo"; cursorManager.setState('open-hand');
+                    sceneManager.camera.position.x += event.deltaX * 8.0; sceneManager.camera.position.y += event.deltaY * 8.0;
+                    sceneManager.controls.target.x += event.deltaX * 8.0; sceneManager.controls.target.y += event.deltaY * 8.0;
+                    break;
+                case "PUSH":
+                    uiGesture.innerText = "Reseteando"; cursorManager.setState('open-hand');
+                    sceneManager.resetCamera();
+                    break;
+                case "POINT":
+                    uiGesture.innerText = "Apuntando"; cursorManager.setState('pointing');
+                    const hitData = sceneManager.checkIntersections(event.glX, event.glY);
+                    if (hitData) {
+                        uiGesture.innerText = `Viajando a ${hitData.id}`;
+                        gestureController.blockInput(true); cursorManager.hide();
+                        cinematics.flyToTarget(hitData, () => { gestureController.blockInput(false); uiGesture.innerText = "Completado"; });
+                    }
+                    break;
+                case "TRACKING":
+                    uiGesture.innerText = "Detectando"; cursorManager.setState('tracking'); break;
+                default:
+                    uiGesture.innerText = "Inactivo"; cursorManager.hide(); break;
+            }
+        };
+
+        const videoElement = document.getElementById('webcam-feed');
+        const gestureController = new GestureController(videoElement, handleGesture);
+
+        // Guardado de Vistas Dinámico (Táctil y Mouse)
+        const btnSaveView = document.getElementById('btn-save-view');
+        const handleSaveView = (e) => {
+            e.preventDefault(); e.stopPropagation();
+            const id = sceneManager.addDynamicHotspot();
+            uiStatus3D.innerText = `${id} Guardado`;
+            setTimeout(() => { uiStatus3D.innerText = "Completado"; }, 2000);
+        };
+        btnSaveView.addEventListener('click', handleSaveView);
+        btnSaveView.addEventListener('touchstart', handleSaveView, {passive: false});
+
+    </script>
+</body>
+</html>
+
+
