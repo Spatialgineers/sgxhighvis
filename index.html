@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SGX Jarvis Interface | Stable Edition</title>
+    <title>SGX Highvis | Precision Spatial Computing</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Import map para Three.js -->
+    <!-- Import map para Three.js y Environments -->
     <script type="importmap">
       {
         "imports": {
@@ -20,15 +20,12 @@
 
     <!-- MediaPipe Dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <!-- GSAP para Cinemáticas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
-        /* SGX Brand Colors & Theme */
         :root {
             --sgx-blue: #32527B;
             --sgx-yellow: #FDCC0D;
@@ -46,7 +43,7 @@
         
         #canvasContainer { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
 
-        /* Feed Webcam: Muted y Playsinline son OBLIGATORIOS para iOS */
+        /* Feed Webcam Seguro */
         #videoElement { 
             position: absolute; bottom: 24px; right: 24px; 
             width: 160px; height: 120px; 
@@ -58,7 +55,6 @@
         }
         #videoElement:hover { opacity: 1; border-color: var(--sgx-yellow); }
 
-        /* Panel Glassmorphism SGX */
         .glass-panel {
             background: rgba(17, 17, 17, 0.75);
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -67,42 +63,54 @@
             z-index: 10;
         }
 
-        /* Cursor Global Suavizado */
-        #cursor-overlay { 
+        /* Cursor Derecho (Rotar, Apuntar, Clic) */
+        #cursor-right { 
             position: absolute; top: 50%; left: 50%; 
             width: 12px; height: 12px; 
             background: rgba(255, 255, 255, 0.8); 
             border: 2px solid transparent; border-radius: 50%; 
             pointer-events: none; z-index: 100; 
             transform: translate(-50%, -50%); 
-            transition: width 0.2s, height 0.2s, background-color 0.2s, border-color 0.2s, border-radius 0.2s; 
+            transition: width 0.15s, height 0.15s, background-color 0.15s, border-color 0.15s, border-radius 0.15s; 
             box-shadow: 0 0 15px rgba(255,255,255,0.5); display: none; 
         }
-        #cursor-overlay.tracking { display: block; }
-        #cursor-overlay.pointing { width: 30px; height: 30px; background: transparent; border-color: var(--sgx-yellow); border-width: 3px; box-shadow: 0 0 20px var(--sgx-yellow), inset 0 0 10px var(--sgx-yellow); }
-        #cursor-overlay.pinching { width: 16px; height: 16px; background: var(--sgx-yellow); border-color: #fff; box-shadow: 0 0 15px var(--sgx-yellow); }
-        
-        /* Modos Especiales */
-        #cursor-overlay.grabbing { width: 28px; height: 28px; background: rgba(184, 115, 51, 0.9); border-color: #fff; border-radius: 8px; box-shadow: 0 0 20px var(--sgx-copper); }
-        #cursor-overlay.drone { 
-            width: 50px; height: 50px; 
-            background: transparent; 
-            border-color: var(--sgx-cyan); border-width: 2px; border-style: dashed;
-            border-radius: 50%; 
+        #cursor-right.tracking { display: block; }
+        #cursor-right.pointing { width: 24px; height: 24px; background: transparent; border-color: var(--sgx-yellow); border-width: 3px; box-shadow: 0 0 20px var(--sgx-yellow), inset 0 0 10px var(--sgx-yellow); }
+        #cursor-right.pinching { width: 16px; height: 16px; background: var(--sgx-yellow); border-color: #fff; box-shadow: 0 0 15px var(--sgx-yellow); }
+        #cursor-right.ui-hover { width: 35px; height: 35px; background: rgba(253, 204, 13, 0.3); border-color: var(--sgx-yellow); border-radius: 50%; box-shadow: 0 0 20px var(--sgx-yellow); }
+
+        /* Cursor Izquierdo (Drone y Panning) */
+        #cursor-left {
+            position: absolute; top: 50%; left: 50%; 
+            width: 12px; height: 12px; 
+            background: rgba(0, 255, 255, 0.8); 
+            border: 2px solid transparent; border-radius: 50%; 
+            pointer-events: none; z-index: 99; 
+            transform: translate(-50%, -50%); 
+            transition: width 0.15s, height 0.15s, background-color 0.15s, border-color 0.15s, border-radius 0.15s; 
+            box-shadow: 0 0 15px rgba(0,255,255,0.5); display: none; 
+        }
+        #cursor-left.tracking { display: block; }
+        #cursor-left.panning { width: 28px; height: 28px; background: rgba(184, 115, 51, 0.9); border-color: #fff; border-radius: 8px; box-shadow: 0 0 20px var(--sgx-copper); }
+        #cursor-left.drone { 
+            width: 50px; height: 50px; background: transparent; 
+            border-color: var(--sgx-cyan); border-width: 2px; border-style: dashed; border-radius: 50%; 
             box-shadow: 0 0 15px var(--sgx-cyan), inset 0 0 10px var(--sgx-cyan); 
             animation: spin-slow 4s linear infinite;
         }
-        
-        #cursor-overlay.ui-hover { width: 35px; height: 35px; background: rgba(253, 204, 13, 0.3); border-color: var(--sgx-yellow); border-radius: 50%; box-shadow: 0 0 20px var(--sgx-yellow); }
 
-        /* Loader SGX Vision */
         .loader { border: 4px solid rgba(253, 204, 13, 0.1); border-left-color: var(--sgx-yellow); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes spin-slow { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
 
-        /* Botones clickeables en el aire */
+        /* Efecto de botones en el aire */
         .hand-clickable { transition: transform 0.15s ease, background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
         .hand-clickable:active, .hand-clickable.air-active { transform: scale(0.9); box-shadow: 0 0 30px var(--sgx-yellow); background-color: var(--sgx-yellow); border-color: transparent; color: black !important; }
+        
+        /* Sliders */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: var(--sgx-cyan); cursor: pointer; margin-top: -5px; box-shadow: 0 0 8px var(--sgx-cyan); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: var(--sgx-blue); border-radius: 2px; }
     </style>
 </head>
 <body>
@@ -110,70 +118,105 @@
     <!-- Pantalla de Carga -->
     <div id="loadingScreen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#111111] transition-opacity duration-500">
         <div class="loader mb-6"></div>
-        <h1 class="text-4xl font-black tracking-widest text-[#FDCC0D]">SGX<span class="text-white">.ENGINE</span></h1>
-        <p id="loadingText" class="text-[#888888] mt-3 font-mono text-xs uppercase tracking-widest text-center">Iniciando Sistemas<br><span class="text-[#FDCC0D]">Permite el acceso a la cámara para continuar</span></p>
+        <h1 class="text-4xl font-black tracking-widest text-[#FDCC0D]">SGX<span class="text-white">.HIGHVIS</span></h1>
+        <p id="loadingText" class="text-[#888888] mt-3 font-mono text-xs uppercase tracking-widest text-center">Iniciando Sistemas Espaciales<br><span class="text-[#FDCC0D]">Permite el acceso a la cámara para continuar</span></p>
     </div>
 
-    <!-- Cargador de Modelos (UI Superior) -->
-    <div class="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 flex items-center glass-panel rounded-xl overflow-hidden shadow-lg">
-        <input type="text" id="model-url-input" placeholder="Pega enlace .glb..." class="bg-black/50 border-none text-white px-4 py-3 w-48 md:w-80 outline-none text-sm font-mono placeholder-gray-500" value="https://static.wixstatic.com/3d/fe81a7_cf1ed4e58d0048efa955f39d347a9466.glb">
-        <button id="btn-load-model" class="hand-clickable bg-[#32527B] hover:bg-[#FDCC0D] hover:text-black text-white font-bold px-6 py-3 transition-colors uppercase text-xs tracking-widest pointer-events-auto h-full">
-            Cargar 3D
+    <!-- Cargador de Modelos 3D Exclusivo Local (Bypass CORS) -->
+    <div class="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 flex items-center glass-panel rounded-full overflow-hidden shadow-[0_0_15px_rgba(50,82,123,0.5)] border border-[#32527B] h-12 pointer-events-auto">
+        <input type="file" id="model-file-input" accept=".glb,.gltf" class="hidden" />
+        <button id="btn-load-local" class="hand-clickable bg-transparent hover:bg-[#32527B] text-white font-bold px-6 h-full flex items-center gap-2 transition-colors uppercase text-sm tracking-widest outline-none">
+            <span class="text-xl">📂</span>
+            <span>Cargar Modelo 3D</span>
         </button>
     </div>
 
-    <!-- Botón Info (Guía) -->
-    <button id="btn-info" class="hand-clickable absolute top-6 right-6 z-20 w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:bg-[#32527B] cursor-pointer pointer-events-auto">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-        </svg>
+    <!-- Botones Superiores (Guía & Ajustes) -->
+    <button id="btn-settings" class="hand-clickable absolute top-6 right-20 z-20 w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:bg-[#32527B] cursor-pointer pointer-events-auto shadow-lg border border-[#32527B] text-xl">
+        ⚙️
+    </button>
+    
+    <button id="btn-info" class="hand-clickable absolute top-6 right-6 z-20 w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:bg-[#32527B] cursor-pointer pointer-events-auto shadow-lg border border-[#32527B]">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
     </button>
 
-    <!-- Botones Inferiores (Centro y Guardar) -->
+    <!-- Panel de Ajustes (Iluminación & PBR) -->
+    <div id="settings-panel" class="absolute top-20 right-6 w-64 glass-panel rounded-xl p-5 flex flex-col gap-4 z-30 pointer-events-none opacity-0 transition-opacity duration-300 border-r-4 border-r-[#00FFFF]">
+        <h2 class="text-sm font-black tracking-wider text-[#00FFFF] border-b border-[#32527B] pb-2">ILUMINACIÓN & ENTORNO</h2>
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-300"><span>Luz Ambiental</span><span id="val-ambient">1.5</span></div>
+            <input type="range" id="slider-ambient" min="0" max="5" step="0.1" value="1.5" class="w-full pointer-events-auto">
+        </div>
+        <div class="flex flex-col gap-1">
+            <div class="flex justify-between text-xs text-gray-300"><span>Luz Direccional</span><span id="val-directional">1.5</span></div>
+            <input type="range" id="slider-directional" min="0" max="5" step="0.1" value="1.5" class="w-full pointer-events-auto">
+        </div>
+        <div class="flex flex-col gap-1 mt-2">
+            <div class="flex justify-between text-xs text-gray-300"><span>Reflejos PBR (HDRI)</span></div>
+            <label class="relative inline-flex items-center cursor-pointer pointer-events-auto mt-1">
+                <input type="checkbox" id="toggle-hdri" class="sr-only peer" checked>
+                <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#00FFFF]"></div>
+                <span class="ml-3 text-xs font-bold text-white" id="val-hdri">ACTIVO</span>
+            </label>
+        </div>
+        <div class="flex flex-col gap-1 mt-2">
+             <div class="flex justify-between text-xs text-gray-300 mb-1"><span>Color de Fondo</span></div>
+             <div class="flex gap-3 pointer-events-auto">
+                 <button id="bg-dark" class="hand-clickable w-8 h-8 rounded-full bg-[#050505] border-2 border-[#00FFFF] shadow-md"></button>
+                 <button id="bg-gray" class="hand-clickable w-8 h-8 rounded-full bg-gray-500 border-2 border-transparent shadow-md"></button>
+                 <button id="bg-light" class="hand-clickable w-8 h-8 rounded-full bg-gray-200 border-2 border-transparent shadow-md"></button>
+             </div>
+        </div>
+    </div>
+
+    <!-- Botones Base (Centro / Guardar) -->
     <div class="absolute bottom-10 left-0 w-full flex justify-center space-x-6 z-20 pointer-events-none">
-        <button id="btn-home" class="hand-clickable glass-panel px-6 py-4 rounded-full text-[#00FFFF] font-bold tracking-widest uppercase text-sm border border-[#00FFFF] shadow-[0_0_20px_rgba(0,255,255,0.2)] pointer-events-auto flex items-center space-x-3 cursor-pointer touch-manipulation">
+        <button id="btn-home" class="hand-clickable glass-panel px-6 py-4 rounded-full text-[#00FFFF] font-bold tracking-widest uppercase text-sm border border-[#00FFFF]/50 shadow-[0_0_20px_rgba(0,255,255,0.2)] pointer-events-auto flex items-center space-x-3 cursor-pointer">
             <span class="text-xl">🏠</span>
             <span>Centro</span>
         </button>
-        
-        <button id="btn-save-view" class="hand-clickable glass-panel px-6 py-4 rounded-full text-[#FDCC0D] font-bold tracking-widest uppercase text-sm border border-[#FDCC0D] shadow-[0_0_20px_rgba(253,204,13,0.2)] pointer-events-auto flex items-center space-x-3 cursor-pointer touch-manipulation">
+        <button id="btn-save-view" class="hand-clickable glass-panel px-6 py-4 rounded-full text-[#FDCC0D] font-bold tracking-widest uppercase text-sm border border-[#FDCC0D]/50 shadow-[0_0_20px_rgba(253,204,13,0.2)] pointer-events-auto flex items-center space-x-3 cursor-pointer">
             <span class="text-xl">📍</span>
             <span>Guardar Vista</span>
         </button>
     </div>
 
-    <!-- Modal Guía de Gestos Bimanual -->
+    <!-- Modal Guía SGX Highvis -->
     <div id="gesture-guide" class="absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300 px-4">
         <div class="glass-panel p-8 rounded-2xl max-w-2xl w-full shadow-2xl transform scale-95 transition-transform duration-300" id="gesture-guide-content">
-            <h2 class="text-3xl font-black text-[#FDCC0D] mb-6 text-center tracking-wide">JARVIS PROTOCOL</h2>
+            <h2 class="text-3xl font-black text-[#FDCC0D] mb-6 text-center tracking-wide">SGX HIGHVIS PROTOCOL</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Mano Izquierda -->
                 <div class="space-y-4">
-                    <h3 class="text-center font-bold text-[#00FFFF] border-b border-[#00FFFF]/30 pb-2">MANO IZQUIERDA</h3>
+                    <h3 class="text-center font-bold text-[#00FFFF] border-b border-[#00FFFF]/30 pb-2">MANO IZQUIERDA (NAVEGACIÓN)</h3>
                     <div class="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/10">
                         <span class="text-3xl">🖐️</span>
-                        <div><p class="font-bold text-white text-sm">Vuelo Drone</p><p class="text-xs text-gray-400">Abre la mano para avanzar. <b>Inclina la muñeca</b> a los lados o adelante/atrás para pilotar suavemente.</p></div>
+                        <div><p class="font-bold text-white text-sm">Vuelo Drone</p><p class="text-xs text-gray-400">Abre la mano para avanzar. <b>Inclina la muñeca</b> a los lados o adelante/atrás para girar suavemente.</p></div>
+                    </div>
+                    <div class="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/10">
+                        <span class="text-3xl">🤏</span>
+                        <div><p class="font-bold text-white text-sm">Agarre (Pan)</p><p class="text-xs text-gray-400">Pellizca el vacío para <b>agarrar y arrastrar</b> el modelo en cualquier dirección.</p></div>
                     </div>
                 </div>
                 <!-- Mano Derecha -->
                 <div class="space-y-4">
-                    <h3 class="text-center font-bold text-[#FDCC0D] border-b border-[#FDCC0D]/30 pb-2">MANO DERECHA</h3>
-                    <div class="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/10">
-                        <span class="text-3xl">✊</span>
-                        <div><p class="font-bold text-white text-sm">Agarre (Pan)</p><p class="text-xs text-gray-400">Cierra el puño y muévelo para arrastrar el mundo en el vacío.</p></div>
-                    </div>
+                    <h3 class="text-center font-bold text-[#FDCC0D] border-b border-[#FDCC0D]/30 pb-2">MANO DERECHA (INTERACCIÓN)</h3>
                     <div class="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/10">
                         <span class="text-3xl">🤏</span>
-                        <div><p class="font-bold text-white text-sm">Rotar / Clic UI</p><p class="text-xs text-gray-400">Pellizca para rotar el modelo, o para presionar botones (🏠📍) en el aire.</p></div>
+                        <div><p class="font-bold text-white text-sm">Rotar / Clic UI</p><p class="text-xs text-gray-400">Pellizca para <b>rotar</b> el modelo o para presionar los botones (🏠/📍) en pantalla.</p></div>
                     </div>
                     <div class="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/10">
                         <span class="text-3xl">☝️</span>
-                        <div><p class="font-bold text-white text-sm">Apuntar</p><p class="text-xs text-gray-400">Extiende el índice para saltar hacia los marcadores guardados.</p></div>
+                        <div><p class="font-bold text-white text-sm">Apuntar (Raycast)</p><p class="text-xs text-gray-400">Extiende solo el índice para viajar instantáneamente hacia los Hotspots generados.</p></div>
                     </div>
                 </div>
             </div>
-            <button id="btn-close-info" class="hand-clickable mt-8 py-4 bg-[#32527B] text-white font-bold rounded-xl hover:bg-opacity-80 transition w-full uppercase text-sm tracking-widest pointer-events-auto">
-                ENTENDIDO
+            <div class="mt-4 flex items-center justify-center space-x-3 p-3 bg-[#32527B]/30 rounded-xl border border-[#32527B]">
+                <span class="text-3xl">🙌</span>
+                <div><p class="font-bold text-white text-sm">Doble Pinch (Zoom)</p><p class="text-xs text-gray-300">Pellizca con ambas manos al mismo tiempo; acércalas o aléjalas para hacer Zoom In/Out.</p></div>
+            </div>
+            <button id="btn-close-info" class="hand-clickable mt-6 py-4 bg-[#32527B] text-white font-bold rounded-xl hover:bg-opacity-80 transition w-full uppercase text-sm tracking-widest pointer-events-auto">
+                INICIAR SISTEMA
             </button>
         </div>
     </div>
@@ -186,18 +229,20 @@
         </div>
         <div class="flex flex-col gap-2 text-xs font-mono text-gray-300 mt-1">
             <p class="flex justify-between"><span>Motor 3D:</span> <span id="status-3d" class="text-yellow-500">Cargando...</span></p>
-            <p class="flex justify-between"><span>Rastreo IA:</span> <span id="status-cam" class="text-yellow-500">Pidiendo Permisos...</span></p>
+            <p class="flex justify-between"><span>Rastreo IA:</span> <span id="status-cam" class="text-yellow-500">Permisos...</span></p>
             <p class="flex justify-between mt-3 pt-3 border-t border-[#32527B] text-[11px] uppercase font-bold text-[#888888]">
-                <span>Mano Izq:</span> <span id="status-left" class="text-[#00FFFF]">IDLE</span>
+                <span>Izq (Pan/Dron):</span> <span id="status-left" class="text-[#00FFFF]">IDLE</span>
             </p>
             <p class="flex justify-between text-[11px] uppercase font-bold text-[#888888]">
-                <span>Mano Der:</span> <span id="status-right" class="text-[#FDCC0D]">IDLE</span>
+                <span>Der (Rot/Apun):</span> <span id="status-right" class="text-[#FDCC0D]">IDLE</span>
             </p>
         </div>
     </div>
 
-    <!-- Overlay & Render -->
-    <div id="cursor-overlay"></div>
+    <!-- Cursors & Render -->
+    <div id="cursor-right" class="cursor-sgx"></div>
+    <div id="cursor-left" class="cursor-sgx"></div>
+    
     <video id="videoElement" autoplay playsinline muted></video>
     <div id="canvasContainer"></div>
 
@@ -205,6 +250,7 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
         // ==========================================
         // ESTADO GLOBAL & UI
@@ -228,23 +274,34 @@
         const uiLeft = document.getElementById('status-left');
         const uiRight = document.getElementById('status-right');
         const videoElement = document.getElementById('videoElement');
-        const loadingText = document.getElementById('loadingText');
-        const modalGuide = document.getElementById('gesture-guide');
 
-        // Modal Logic
+        // Modal Lógica
+        const modalGuide = document.getElementById('gesture-guide');
         document.getElementById('btn-info').addEventListener('click', () => {
             modalGuide.classList.replace('opacity-0', 'opacity-100');
             modalGuide.classList.replace('pointer-events-none', 'pointer-events-auto');
-            document.getElementById('gesture-guide-content').classList.replace('scale-95', 'scale-100');
         });
         document.getElementById('btn-close-info').addEventListener('click', () => {
             modalGuide.classList.replace('opacity-100', 'opacity-0');
             modalGuide.classList.replace('pointer-events-auto', 'pointer-events-none');
-            document.getElementById('gesture-guide-content').classList.replace('scale-100', 'scale-95');
+        });
+
+        // Panel Ajustes Lógica
+        const settingsPanel = document.getElementById('settings-panel');
+        let settingsOpen = false;
+        document.getElementById('btn-settings').addEventListener('click', () => {
+            settingsOpen = !settingsOpen;
+            if(settingsOpen) {
+                settingsPanel.classList.replace('opacity-0', 'opacity-100');
+                settingsPanel.classList.replace('pointer-events-none', 'pointer-events-auto');
+            } else {
+                settingsPanel.classList.replace('opacity-100', 'opacity-0');
+                settingsPanel.classList.replace('pointer-events-auto', 'pointer-events-none');
+            }
         });
 
         // ==========================================
-        // MATH & LERP UTILS
+        // UTILIDADES MATEMÁTICAS
         // ==========================================
         class MathUtils {
             static distanceEuclidean(p1, p2) { return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2) + Math.pow(p1.z - p2.z, 2)); }
@@ -262,13 +319,14 @@
         }
 
         // ==========================================
-        // GESTOR DEL CURSOR (DERECHO - PRINCIPAL)
+        // GESTOR DE CURSORES
         // ==========================================
         class CursorManager {
-            constructor() {
-                this.element = document.getElementById('cursor-overlay');
+            constructor(elementId) {
+                this.element = document.getElementById(elementId);
                 this.targetX = window.innerWidth / 2; this.targetY = window.innerHeight / 2;
                 this.currentX = this.targetX; this.currentY = this.targetY;
+                this.hoveredBtn = null;
                 this.update();
             }
             setTarget(normalizedX, normalizedY) {
@@ -276,12 +334,12 @@
                 this.targetY = normalizedY * window.innerHeight;
             }
             setState(state) {
-                this.element.className = 'tracking'; 
+                this.element.className = 'cursor-sgx tracking'; 
                 if(state) this.element.classList.add(state);
             }
-            hide() { this.element.className = ''; }
+            hide() { this.element.className = 'cursor-sgx'; this.hoveredBtn = null; }
             
-            getThreeCoordinates() {
+            getThreeCoords() {
                 return { x: (this.currentX / window.innerWidth) * 2 - 1, y: -(this.currentY / window.innerHeight) * 2 + 1 };
             }
 
@@ -290,29 +348,42 @@
                 this.currentY = MathUtils.lerp(this.currentY, this.targetY, 0.3);
                 this.element.style.left = `${this.currentX}px`; this.element.style.top = `${this.currentY}px`;
                 
-                const elUnder = document.elementFromPoint(this.currentX, this.currentY);
-                if (elUnder && (elUnder.classList.contains('hand-clickable') || elUnder.closest('.hand-clickable'))) {
-                    this.element.classList.add('ui-hover');
-                } else {
-                    this.element.classList.remove('ui-hover');
-                }
+                this.hoveredBtn = null;
+                const clickables = document.querySelectorAll('.hand-clickable');
+                clickables.forEach(btn => {
+                    const rect = btn.getBoundingClientRect();
+                    const pad = 30; // Hitbox expandido para air-click super suave
+                    if (rect.width > 0 && 
+                        this.currentX >= rect.left - pad && this.currentX <= rect.right + pad &&
+                        this.currentY >= rect.top - pad && this.currentY <= rect.bottom + pad) {
+                        this.hoveredBtn = btn;
+                    }
+                });
+
+                if (this.hoveredBtn) this.element.classList.add('ui-hover');
+                else this.element.classList.remove('ui-hover');
+                
                 requestAnimationFrame(this.update.bind(this));
             }
         }
-        const cursorManager = new CursorManager();
+        const cursorRight = new CursorManager('cursor-right');
+        const cursorLeft = new CursorManager('cursor-left');
 
         // ==========================================
-        // MOTOR 3D & HOTSPOTS (THREE.JS)
+        // MOTOR 3D Y ENTORNO PBR (THREE.JS)
         // ==========================================
         class SceneManager {
             constructor() {
                 this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x050505);
                 this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
                 this.camera.position.set(0, 1.5, 4.5);
                 
                 this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.toneMappingExposure = 1.0;
                 document.getElementById('canvasContainer').appendChild(this.renderer.domElement);
 
                 this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -326,6 +397,12 @@
                 this.modelWrapper = new THREE.Group(); 
                 this.scene.add(this.modelWrapper);
 
+                // Entorno PBR Realista (Soluciona modelos oscuros)
+                this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+                this.pmremGenerator.compileEquirectangularShader();
+                this.roomEnvironment = this.pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+                this.scene.environment = this.roomEnvironment;
+
                 this.setupLighting();
 
                 window.addEventListener('resize', () => {
@@ -336,56 +413,70 @@
             }
 
             setupLighting() {
-                this.scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-                const dirLight = new THREE.DirectionalLight(0xfdcc0d, 1.5); 
-                dirLight.position.set(5, 10, 7);
-                this.scene.add(dirLight);
-                const fillLight = new THREE.DirectionalLight(0x32527b, 2.0); 
-                fillLight.position.set(-5, 0, -5);
-                this.scene.add(fillLight);
+                this.ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+                this.scene.add(this.ambientLight);
+                
+                this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.5); 
+                this.directionalLight.position.set(5, 10, 7);
+                this.scene.add(this.directionalLight);
+                
+                this.fillLight = new THREE.DirectionalLight(0x32527b, 1.0); 
+                this.fillLight.position.set(-5, 0, -5);
+                this.scene.add(this.fillLight);
             }
 
+            // Destrucción profunda absoluta (GPU Memory Cleared)
             clearModel() {
-                while(this.modelWrapper.children.length > 0){
-                    const child = this.modelWrapper.children[0];
-                    this.modelWrapper.remove(child);
-                    if (child.geometry) child.geometry.dispose();
-                    if (child.material) {
-                        if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
-                        else child.material.dispose();
-                    }
+                if(this.modelWrapper) {
+                    this.modelWrapper.traverse((child) => {
+                        if (child.isMesh) {
+                            if (child.geometry) child.geometry.dispose();
+                            if (child.material) {
+                                if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                                else child.material.dispose();
+                            }
+                        }
+                    });
+                    this.scene.remove(this.modelWrapper);
                 }
+                this.modelWrapper = new THREE.Group();
+                this.scene.add(this.modelWrapper);
                 this.hotspots = [];
             }
 
             loadModel(url) {
-                ui3D.innerText = "Descargando..."; ui3D.className = "text-yellow-500 font-bold";
-                
-                const manager = new THREE.LoadingManager();
-                manager.onLoad = () => {
+                ui3D.innerText = "Procesando..."; ui3D.className = "text-yellow-500 font-bold";
+                this.clearModel();
+
+                const loader = new GLTFLoader();
+                loader.load(url, (gltf) => {
+                    const model = gltf.scene;
+                    const box = new THREE.Box3().setFromObject(model);
+                    if (box.isEmpty()) return;
+
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    let targetScale = 1;
+                    if(maxDim > 0) targetScale = 3.5 / maxDim;
+                    
+                    model.scale.setScalar(targetScale);
+                    model.position.copy(center).multiplyScalar(-targetScale);
+                    
+                    const pivot = new THREE.Group();
+                    pivot.add(model);
+                    this.modelWrapper.add(pivot);
+                    this.modelWrapper.rotation.set(0,0,0);
+
                     ui3D.innerText = "Operativo"; ui3D.className = "text-green-400 font-bold";
                     EngineState.modelReady = true;
                     EngineState.check();
                     this.createBaseHotspots();
                     this.resetCamera();
-                };
 
-                const loader = new GLTFLoader(manager);
-                loader.load(url, (gltf) => {
-                    this.clearModel();
-                    const model = gltf.scene;
-                    const box = new THREE.Box3().setFromObject(model);
-                    const center = box.getCenter(new THREE.Vector3());
-                    const size = box.getSize(new THREE.Vector3());
-                    const targetScale = 3.5 / Math.max(size.x, size.y, size.z);
-                    
-                    model.scale.set(targetScale, targetScale, targetScale);
-                    model.position.sub(center.multiplyScalar(targetScale));
-                    this.modelWrapper.add(model);
-                    this.modelWrapper.rotation.set(0,0,0);
                 }, undefined, (error) => {
-                    ui3D.innerText = "Error Modelo"; ui3D.className = "text-red-500 font-bold";
-                    console.error(error);
+                    ui3D.innerText = "Error Archivo"; ui3D.className = "text-red-500 font-bold";
+                    console.error("Fallo de carga GLB:", error);
                 });
             }
 
@@ -483,13 +574,14 @@
         }
 
         // ==========================================
-        // ORQUESTADOR Y BOTONES
+        // ORQUESTADOR Y EVENTOS DE UI (ILUMINACIÓN & CARGA)
         // ==========================================
         const sceneManager = new SceneManager();
+        sceneManager.loadModel("https://static.wixstatic.com/3d/fe81a7_cf1ed4e58d0048efa955f39d347a9466.glb");
+        
         const cinematics = new CinematicEngine(sceneManager.camera, sceneManager.controls, sceneManager);
         let isInputBlocked = false;
 
-        // Variables de estado del Drone
         let droneActive = false;
         let droneBase = null; 
         let droneVelocity = { yaw: 0, pitch: 0 };
@@ -502,29 +594,28 @@
                  sceneManager.modelWrapper.rotation.y += 0.001; 
             }
             
-            // Vuelo Continuo Suavizado (Drone)
             if (droneActive && !isInputBlocked) {
                 const forward = new THREE.Vector3();
                 sceneManager.camera.getWorldDirection(forward);
                 const up = new THREE.Vector3(0, 1, 0);
                 const right = new THREE.Vector3().crossVectors(forward, up).normalize();
 
-                const turnMult = 0.6; // Sensibilidad de giro
+                const turnMult = 0.6; 
                 forward.applyAxisAngle(up, droneVelocity.yaw * turnMult);
                 forward.applyAxisAngle(right, droneVelocity.pitch * turnMult);
 
-                const baseSpeed = 0.025; // Velocidad de avance
+                const baseSpeed = 0.025; 
                 sceneManager.camera.position.addScaledVector(forward, baseSpeed);
                 sceneManager.controls.target.copy(sceneManager.camera.position).add(forward.multiplyScalar(5));
             }
         }
         animate();
 
-        // Botones UI Físicos y Air-Clicks
+        // Botones Generales
         const btnSaveView = document.getElementById('btn-save-view');
         const btnHome = document.getElementById('btn-home');
-        const btnLoadModel = document.getElementById('btn-load-model');
-        const modelInput = document.getElementById('model-url-input');
+        const btnLoadLocal = document.getElementById('btn-load-local');
+        const modelFileInput = document.getElementById('model-file-input');
 
         const executeSaveView = () => {
             const id = sceneManager.saveDynamicView();
@@ -539,75 +630,81 @@
             setTimeout(() => { btnHome.classList.remove('air-active'); }, 1000);
         };
 
-        const executeLoadModel = () => {
-            const url = modelInput.value.trim();
-            if(url) {
-                btnLoadModel.classList.add('air-active');
-                sceneManager.loadModel(url);
-                setTimeout(() => { btnLoadModel.classList.remove('air-active'); }, 1000);
-            }
-        };
-
         btnSaveView.addEventListener('click', (e) => { e.preventDefault(); executeSaveView(); });
         btnSaveView.addEventListener('touchstart', (e) => { e.preventDefault(); executeSaveView(); }, {passive: false});
-        
         btnHome.addEventListener('click', (e) => { e.preventDefault(); executeHome(); });
         btnHome.addEventListener('touchstart', (e) => { e.preventDefault(); executeHome(); }, {passive: false});
 
-        btnLoadModel.addEventListener('click', (e) => { e.preventDefault(); executeLoadModel(); });
-
-        // ==========================================
-        // INIT CÁMARA (ESTRICTO SGX VISION)
-        // ==========================================
-        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-        hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
-
-        // 1. Pedir permisos nativos primero
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: {ideal: 1280}, height: {ideal: 720} } })
-        .then((stream) => {
-            videoElement.srcObject = stream;
-            
-            // 2. Iniciar MediaPipe y cargar 3D en paralelo
-            const cameraFeed = new Camera(videoElement, {
-                onFrame: async () => { await hands.send({image: videoElement}); },
-                width: 1280, height: 720
-            });
-            
-            cameraFeed.start().then(() => {
-                uiCam.innerText = "Operativo"; uiCam.className = "text-green-400 font-bold";
-            });
-            
-            // Iniciar descarga del modelo solo cuando hay permisos
-            const initialModel = document.getElementById('model-url-input').value;
-            sceneManager.loadModel(initialModel);
-
-        }).catch(err => {
-            console.error("Permiso denegado: ", err);
-            uiCam.innerText = "Denegada"; uiCam.className = "text-red-500 font-bold";
-            loadingText.innerHTML = "<span class='text-red-500'>Error: Permite el acceso a la cámara.</span>";
+        // Lógica de Carga Local Segura
+        btnLoadLocal.addEventListener('click', (e) => { 
+            e.preventDefault(); 
+            btnLoadLocal.classList.add('air-active');
+            modelFileInput.click(); 
+            setTimeout(() => btnLoadLocal.classList.remove('air-active'), 1000);
         });
 
+        modelFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                // Crea un Local Blob que evade cualquier restricción de CORS
+                const blobURL = URL.createObjectURL(file);
+                sceneManager.loadModel(blobURL);
+            }
+        });
+
+        // Controles de Iluminación y Entorno
+        document.getElementById('slider-ambient').addEventListener('input', (e) => {
+            sceneManager.ambientLight.intensity = parseFloat(e.target.value);
+            document.getElementById('val-ambient').innerText = e.target.value;
+        });
+        document.getElementById('slider-directional').addEventListener('input', (e) => {
+            sceneManager.directionalLight.intensity = parseFloat(e.target.value);
+            document.getElementById('val-directional').innerText = e.target.value;
+        });
+        document.getElementById('toggle-hdri').addEventListener('change', (e) => {
+            const active = e.target.checked;
+            sceneManager.scene.environment = active ? sceneManager.roomEnvironment : null;
+            document.getElementById('val-hdri').innerText = active ? "ACTIVO" : "APAGADO";
+        });
+        
+        const setBg = (hex, btn) => {
+            sceneManager.scene.background.setHex(hex);
+            ['bg-dark', 'bg-gray', 'bg-light'].forEach(id => document.getElementById(id).classList.replace('border-[#00FFFF]', 'border-transparent'));
+            btn.classList.replace('border-transparent', 'border-[#00FFFF]');
+        };
+        document.getElementById('bg-dark').addEventListener('click', (e) => setBg(0x050505, e.target));
+        document.getElementById('bg-gray').addEventListener('click', (e) => setBg(0x555555, e.target));
+        document.getElementById('bg-light').addEventListener('click', (e) => setBg(0xe5e7eb, e.target));
+
+
         // ==========================================
-        // IA: DUAL-WIELD LOGIC
+        // IA: MEDIAPIPE DUAL-WIELD PROTOCOL
         // ==========================================
         let leftBuffer = [], rightBuffer = [];
-        let prevRightHandCenter = null, prevPinchDist = null;
+        let prevPinchDist = null;
+        let rightHandState = { mode: 'IDLE', startX: 0, startY: 0 };
+        let leftHandState = { mode: 'IDLE', startX: 0, startY: 0 };
+
+        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+        hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
 
         hands.onResults((results) => {
             if (!EngineState.aiReady) {
                 EngineState.aiReady = true;
+                uiCam.innerText = "Operativo"; uiCam.className = "text-green-400 font-bold";
                 EngineState.check();
             }
 
             if (isInputBlocked) return;
             
+            // Asignación Estricta de Handedness (Cero Cruces)
             let rawLeft = null, rawRight = null;
-            if (results.multiHandLandmarks) {
+            if (results.multiHandLandmarks && results.multiHandedness) {
                 for (let i = 0; i < results.multiHandLandmarks.length; i++) {
                     const hand = results.multiHandLandmarks[i];
-                    const screenX = 1 - hand[0].x; 
-                    if (screenX > 0.5) rawLeft = hand; // Izquierda
-                    else rawRight = hand;              // Derecha
+                    const handedness = results.multiHandedness[i].label; 
+                    if (handedness === 'Left') rawRight = hand;  // Física Derecha (Modo Espejo)
+                    if (handedness === 'Right') rawLeft = hand;  // Física Izquierda
                 }
             }
 
@@ -617,9 +714,8 @@
                 if (leftBuffer.length > 5) leftBuffer.shift();
                 smoothLeft = MathUtils.averageLandmarks(leftBuffer);
             } else {
-                leftBuffer = []; droneActive = false; droneBase = null; 
-                droneVelocity.yaw = 0; droneVelocity.pitch = 0;
-                uiLeft.innerText = "IDLE";
+                leftBuffer = []; droneActive = false; droneBase = null; uiLeft.innerText = "IDLE";
+                cursorLeft.hide(); leftHandState.mode = 'IDLE';
             }
 
             let smoothRight = null;
@@ -628,22 +724,33 @@
                 if (rightBuffer.length > 5) rightBuffer.shift();
                 smoothRight = MathUtils.averageLandmarks(rightBuffer);
             } else {
-                rightBuffer = []; prevRightHandCenter = null; uiRight.innerText = "IDLE";
+                rightBuffer = []; rightHandState.mode = 'IDLE'; uiRight.innerText = "IDLE"; cursorRight.hide();
             }
 
             if (!smoothLeft && !smoothRight) {
-                cursorManager.hide();
                 sceneManager.hotspots.forEach(h => { h.material.opacity = 0.8; h.scale.set(1,1,1); }); 
                 return;
             }
 
-            if (smoothRight) {
-                cursorManager.setTarget(1 - smoothRight[8].x, smoothRight[8].y);
-            } else if (smoothLeft && !droneActive) {
-                cursorManager.setTarget(1 - smoothLeft[8].x, smoothLeft[8].y);
-            }
+            // =====================================
+            // MANEJADOR UNIVERSAL DE CLICS UI (Cero Saltos)
+            // =====================================
+            const handleUIClick = (cursorManagerObj, uiLabelElement) => {
+                if (cursorManagerObj.hoveredBtn) {
+                    const now = Date.now();
+                    if (now - (cursorManagerObj.hoveredBtn.dataset.lastClick || 0) > 1000) { 
+                        cursorManagerObj.hoveredBtn.click();
+                        cursorManagerObj.hoveredBtn.dataset.lastClick = now;
+                        uiLabelElement.innerText = "AIR-CLICK";
+                    }
+                    return true;
+                }
+                return false;
+            };
 
+            // =====================================
             // 1. DOBLE PINCH (ZOOM)
+            // =====================================
             if (smoothLeft && smoothRight) {
                 const pDistL = MathUtils.distanceEuclidean(smoothLeft[4], smoothLeft[8]);
                 const pDistR = MathUtils.distanceEuclidean(smoothRight[4], smoothRight[8]);
@@ -653,7 +760,7 @@
                     let deltaZoom = prevPinchDist !== null ? distHands - prevPinchDist : 0;
                     prevPinchDist = distHands;
                     uiLeft.innerText = "ZOOM"; uiRight.innerText = "ZOOM";
-                    cursorManager.setState('pinching');
+                    cursorRight.setState('pinching'); cursorLeft.hide();
                     sceneManager.camera.position.z += deltaZoom * 20.0;
                     droneActive = false; 
                     return;
@@ -661,109 +768,72 @@
             }
             prevPinchDist = null;
 
-            // 2. MANO DERECHA (ROTAR, AGARRAR, APUNTAR, CLICK)
-            if (smoothRight) {
-                const idxTip = smoothRight[8];
-                const pinchDist = MathUtils.distanceEuclidean(smoothRight[4], idxTip);
-                
-                const isIdxFold = smoothRight[8].y > smoothRight[6].y;
-                const isMidFold = smoothRight[12].y > smoothRight[10].y;
-                const isRingFold = smoothRight[16].y > smoothRight[14].y;
-                const isPinkyFold = smoothRight[20].y > smoothRight[18].y;
-
-                const isFist = isIdxFold && isMidFold && isRingFold && isPinkyFold;
-                const isPoint = !isIdxFold && isMidFold && isRingFold && isPinkyFold;
-
-                if (isFist) {
-                    uiRight.innerText = "AGARRE (PAN)"; 
-                    cursorManager.setState('grabbing');
-                    let deltaX = 0, deltaY = 0;
-                    if (prevRightHandCenter !== null) {
-                        deltaX = -(smoothRight[9].x - prevRightHandCenter.x);
-                        deltaY = (smoothRight[9].y - prevRightHandCenter.y);
-                    }
-                    prevRightHandCenter = smoothRight[9];
-                    
-                    const panSpeed = 12.0; 
-                    sceneManager.camera.position.x += deltaX * panSpeed;
-                    sceneManager.camera.position.y += deltaY * panSpeed;
-                    sceneManager.controls.target.x += deltaX * panSpeed;
-                    sceneManager.controls.target.y += deltaY * panSpeed;
-                    return;
-                }
-
-                if (pinchDist < 0.05) {
-                    cursorManager.setState('pinching');
-                    
-                    let elUnder = document.elementFromPoint(cursorManager.currentX, cursorManager.currentY);
-                    if (elUnder && (elUnder.classList.contains('hand-clickable') || elUnder.closest('.hand-clickable'))) {
-                        let targetBtn = elUnder.classList.contains('hand-clickable') ? elUnder : elUnder.closest('.hand-clickable');
-                        const now = Date.now();
-                        if (now - (targetBtn.dataset.lastClick || 0) > 1000) { 
-                            targetBtn.click();
-                            targetBtn.dataset.lastClick = now;
-                            uiRight.innerText = "AIR-CLICK";
-                        }
-                        return;
-                    }
-
-                    uiRight.innerText = "ROTANDO"; 
-                    let deltaX = 0, deltaY = 0;
-                    if (prevRightHandCenter !== null) {
-                        deltaX = -(smoothRight[9].x - prevRightHandCenter.x);
-                        deltaY = (smoothRight[9].y - prevRightHandCenter.y);
-                    }
-                    prevRightHandCenter = smoothRight[9];
-                    if (sceneManager.modelWrapper) {
-                        sceneManager.modelWrapper.rotation.y += deltaX * 6.0;
-                        sceneManager.modelWrapper.rotation.x += deltaY * 6.0;
-                    }
-                    return;
-                }
-                prevRightHandCenter = smoothRight[9];
-
-                if (isPoint) {
-                    uiRight.innerText = "APUNTANDO"; cursorManager.setState('pointing');
-                    const smoothCoords = cursorManager.getThreeCoordinates();
-                    const hitData = sceneManager.checkIntersections(smoothCoords);
-                    
-                    if (hitData && !cinematics.isAnimating) {
-                        uiRight.innerText = `VIAJANDO`;
-                        isInputBlocked = true; cursorManager.hide();
-                        sceneManager.hotspots.forEach(h => { h.material.opacity = 0.5; h.scale.set(1,1,1); }); 
-                        cinematics.flyToTarget(hitData, () => { 
-                            isInputBlocked = false; 
-                            uiRight.innerText = "LLEGADA"; 
-                        });
-                    }
-                    return;
-                }
-                
-                uiRight.innerText = "TRACKING";
-                if(!smoothLeft || !droneActive) cursorManager.setState('tracking');
-            }
-
-            // 3. MANO IZQUIERDA (VUELO DRONE)
+            // =====================================
+            // 2. MANO IZQUIERDA (PANNING Y DRONE)
+            // =====================================
             if (smoothLeft) {
+                const idxTip = smoothLeft[8];
+                const screenX = 1 - idxTip.x; const screenY = idxTip.y;
+                const pinchDist = MathUtils.distanceEuclidean(smoothLeft[4], idxTip);
+                
                 const isIdxExt = smoothLeft[8].y < smoothLeft[6].y;
                 const isMidExt = smoothLeft[12].y < smoothLeft[10].y;
                 const isRingExt = smoothLeft[16].y < smoothLeft[14].y;
                 const isPinkyExt = smoothLeft[20].y < smoothLeft[18].y;
+                
+                const isPinch = pinchDist < 0.05;
+                const isOpen = isIdxExt && isMidExt && isRingExt && isPinkyExt && !isPinch;
 
-                const isOpen = isIdxExt && isMidExt && isRingExt && isPinkyExt;
+                // Anclaje de cursor al punto medio del pellizco para estabilizar clics
+                let targetX = screenX; let targetY = screenY;
+                if (isPinch) {
+                    targetX = 1 - ((smoothLeft[8].x + smoothLeft[4].x) / 2);
+                    targetY = (smoothLeft[8].y + smoothLeft[4].y) / 2;
+                }
+                cursorLeft.setTarget(targetX, targetY);
 
-                if (isOpen) {
+                // A. Pellizco Izquierdo (Clic UI o Panning)
+                if (isPinch) {
+                    cursorLeft.setState('panning');
+                    droneActive = false;
+                    
+                    if (handleUIClick(cursorLeft, uiLeft)) return;
+
+                    uiLeft.innerText = "PANNING"; 
+                    if (leftHandState.mode !== 'PINCH_PAN') {
+                        leftHandState.mode = 'PINCH_PAN';
+                        leftHandState.startX = targetX;
+                        leftHandState.startY = targetY;
+                    } else {
+                        let deltaX = targetX - leftHandState.startX;
+                        let deltaY = targetY - leftHandState.startY;
+                        leftHandState.startX = targetX;
+                        leftHandState.startY = targetY;
+                        
+                        const panSpeed = 16.0; 
+                        const vX = new THREE.Vector3(); const vY = new THREE.Vector3();
+                        sceneManager.camera.matrix.extractBasis(vX, vY, new THREE.Vector3());
+                        
+                        sceneManager.camera.position.addScaledVector(vX, -deltaX * panSpeed);
+                        sceneManager.controls.target.addScaledVector(vX, -deltaX * panSpeed);
+                        sceneManager.camera.position.addScaledVector(vY, deltaY * panSpeed);
+                        sceneManager.controls.target.addScaledVector(vY, deltaY * panSpeed);
+                    }
+                } 
+                // B. Mano Abierta Izquierda (Drone)
+                else if (isOpen) {
                     uiLeft.innerText = "DRONE FLIGHT"; 
-                    if (!smoothRight) cursorManager.setState('drone');
+                    cursorLeft.setState('drone');
                     droneActive = true;
+                    leftHandState.mode = 'IDLE';
 
-                    // Rotación de muñeca (Yaw/Pitch)
                     let currentRoll = smoothLeft[17].y - smoothLeft[5].y;
                     let currentPitch = smoothLeft[9].y - smoothLeft[0].y;
 
                     if (!droneBase) {
                         droneBase = { roll: currentRoll, pitch: currentPitch };
                         droneVelocity = { yaw: 0, pitch: 0 };
+                        cursorLeft.setTarget(targetX, targetY);
                     }
 
                     let targetYaw = currentRoll - droneBase.roll;
@@ -773,18 +843,104 @@
                     if (Math.abs(targetYaw) < deadzone) targetYaw = 0;
                     if (Math.abs(targetPitch) < deadzone) targetPitch = 0;
 
-                    // Interpolación hiper-suave para movimiento cinematográfico
                     droneVelocity.yaw = MathUtils.lerp(droneVelocity.yaw, targetYaw, 0.05);
                     droneVelocity.pitch = MathUtils.lerp(droneVelocity.pitch, targetPitch, 0.05);
-
-                } else {
-                    droneActive = false;
-                    droneBase = null; 
+                } 
+                else {
+                    droneActive = false; droneBase = null; 
                     droneVelocity.yaw = MathUtils.lerp(droneVelocity.yaw, 0, 0.1);
                     droneVelocity.pitch = MathUtils.lerp(droneVelocity.pitch, 0, 0.1);
                     uiLeft.innerText = "TRACKING";
+                    leftHandState.mode = 'IDLE';
+                    if (!smoothRight) cursorLeft.setState('tracking'); else cursorLeft.hide();
                 }
             }
+
+            // =====================================
+            // 3. MANO DERECHA (ROTAR, APUNTAR, CLICK)
+            // =====================================
+            if (smoothRight) {
+                const idxTip = smoothRight[8];
+                const pinchDist = MathUtils.distanceEuclidean(smoothRight[4], idxTip);
+                
+                const isIdxFold = smoothRight[8].y > smoothRight[6].y;
+                const isMidFold = smoothRight[12].y > smoothRight[10].y;
+                const isRingFold = smoothRight[16].y > smoothRight[14].y;
+                const isPinkyFold = smoothRight[20].y > smoothRight[18].y;
+
+                const isPinch = pinchDist < 0.05;
+                const isPoint = !isIdxFold && isMidFold && isRingFold && isPinkyFold && !isPinch;
+
+                const screenX = 1 - smoothRight[8].x; 
+                const screenY = smoothRight[8].y;
+
+                // Estabilización de Cursor Derecho (Cero Saltos al pellizcar)
+                let targetX = screenX; let targetY = screenY;
+                if (isPinch) {
+                    targetX = 1 - ((smoothRight[8].x + smoothRight[4].x) / 2);
+                    targetY = (smoothRight[8].y + smoothRight[4].y) / 2;
+                }
+                cursorRight.setTarget(targetX, targetY);
+
+                // A. Pellizco (Air-Click UI o Rotar Modelo)
+                if (isPinch) {
+                    cursorRight.setState('pinching');
+                    
+                    if (handleUIClick(cursorRight, uiRight)) return;
+
+                    uiRight.innerText = "ROTANDO"; 
+                    if (rightHandState.mode !== 'PINCH_ROTATE') {
+                        rightHandState.mode = 'PINCH_ROTATE';
+                        rightHandState.startX = targetX; 
+                        rightHandState.startY = targetY;
+                    } else {
+                        let deltaX = targetX - rightHandState.startX;
+                        let deltaY = targetY - rightHandState.startY;
+                        rightHandState.startX = targetX;
+                        rightHandState.startY = targetY;
+                        
+                        if (sceneManager.modelWrapper) {
+                            sceneManager.modelWrapper.rotation.y += deltaX * 5.0; 
+                            sceneManager.modelWrapper.rotation.x += deltaY * 5.0;
+                        }
+                    }
+                    return;
+                }
+
+                rightHandState.mode = 'IDLE';
+
+                // B. Apuntar (Raycast a Hotspots)
+                if (isPoint) {
+                    uiRight.innerText = "APUNTANDO"; cursorRight.setState('pointing');
+                    const smoothCoords = cursorRight.getThreeCoords();
+                    const hitData = sceneManager.checkIntersections(smoothCoords);
+                    
+                    if (hitData && !cinematics.isAnimating) {
+                        uiRight.innerText = `VIAJANDO`;
+                        isInputBlocked = true; cursorRight.hide();
+                        sceneManager.hotspots.forEach(h => { h.material.opacity = 0.5; h.scale.set(1,1,1); }); 
+                        cinematics.flyToTarget(hitData, () => { isInputBlocked = false; uiRight.innerText = "LLEGADA"; });
+                    }
+                    return;
+                }
+                
+                uiRight.innerText = "TRACKING";
+                if(!smoothLeft || !droneActive) cursorRight.setState('tracking');
+            }
+        });
+
+        // Inicialización NATIVA de Cámara
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: {ideal: 1280}, height: {ideal: 720} } })
+        .then((stream) => {
+            videoElement.srcObject = stream;
+            const cameraFeed = new Camera(videoElement, {
+                onFrame: async () => { await hands.send({image: videoElement}); },
+                width: 1280, height: 720
+            });
+            cameraFeed.start();
+        }).catch(err => {
+            uiCam.innerText = "Denegada"; uiCam.className = "text-red-500 font-bold";
+            document.getElementById('loadingText').innerHTML = "<span class='text-red-500'>Error de Hardware. Permite acceso a cámara.</span>";
         });
 
     </script>
