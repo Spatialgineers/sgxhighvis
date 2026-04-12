@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SGX Highvis | Precision Spatial Computing</title>
+    <title>SGX HighVis | Spatial Computing Interface</title>
     
+    <!-- Google Fonts: Orbitron para títulos, Roboto Mono para datos técnicos -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -26,224 +31,275 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
+        /* SGX Brand Colors & Theme */
         :root {
             --sgx-blue: #32527B;
             --sgx-yellow: #FDCC0D;
             --sgx-copper: #B87333;
-            --sgx-dark: #111111;
+            --sgx-dark: #02050A;
             --sgx-cyan: #00FFFF;
         }
         
         body { 
             background-color: var(--sgx-dark); color: white; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: 'Roboto Mono', monospace; 
             overflow: hidden; margin: 0; padding: 0; 
             user-select: none; touch-action: none; 
         }
+
+        h1, h2, h3, .font-tech { font-family: 'Orbitron', sans-serif; }
+
+        /* Holodeck Grid Background */
+        .holodeck-grid {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: 
+                linear-gradient(rgba(50, 82, 123, 0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(50, 82, 123, 0.2) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+            animation: gridMove 15s linear infinite;
+        }
+        .vignette {
+            position: absolute; inset: 0; z-index: 0; pointer-events: none;
+            background: radial-gradient(circle, transparent 20%, var(--sgx-dark) 100%);
+        }
+        @keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 50px 50px; } }
         
         #canvasContainer { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
 
-        /* Feed Webcam Seguro */
+        /* Feed Webcam - Corte 45 grados */
         #videoElement { 
-            position: absolute; bottom: 24px; right: 24px; 
-            width: 160px; height: 120px; 
-            border-radius: 12px; border: 2px solid rgba(253, 204, 13, 0.4); 
+            position: absolute; bottom: 20px; left: 20px; 
+            width: 140px; height: 105px; 
+            border: 2px solid var(--sgx-blue); 
             z-index: 10; transform: scaleX(-1); 
-            background: #000; object-fit: cover; opacity: 0.6; 
+            background: #000; object-fit: cover; opacity: 0.5; 
             transition: opacity 0.3s, border-color 0.3s; 
-            box-shadow: 0 8px 32px rgba(0,0,0,0.8); 
+            box-shadow: 0 0 15px rgba(50, 82, 123, 0.4);
+            clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
         }
-        #videoElement:hover { opacity: 1; border-color: var(--sgx-yellow); }
 
-        .glass-panel {
-            background: rgba(17, 17, 17, 0.75);
-            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(50, 82, 123, 0.4);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+        /* SGX UI Panels (Rigid 45-Degree Cut) */
+        .sgx-panel {
+            background: rgba(2, 5, 10, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--sgx-blue);
+            box-shadow: 0 0 25px rgba(50, 82, 123, 0.2);
             z-index: 10;
+            clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+        }
+        
+        .sgx-btn {
+            background: var(--sgx-blue); color: white;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            transition: all 0.2s ease; border: 1px solid transparent;
+            display: flex; align-items: center; justify-content: center;
+            text-transform: uppercase; font-weight: 900; letter-spacing: 1.5px;
+        }
+        .sgx-btn.yellow { background: rgba(253, 204, 13, 0.1); color: var(--sgx-yellow); border: 1px solid var(--sgx-yellow); }
+        .sgx-btn.cyan { background: rgba(0, 255, 255, 0.1); color: var(--sgx-cyan); border: 1px solid var(--sgx-cyan); }
+        .sgx-btn.copper { background: rgba(184, 115, 51, 0.1); color: var(--sgx-copper); border: 1px solid var(--sgx-copper); }
+        
+        .sgx-btn:hover { background: var(--sgx-yellow); color: black; border-color: var(--sgx-yellow); box-shadow: 0 0 20px var(--sgx-yellow); }
+        .sgx-btn.cyan:hover { background: var(--sgx-cyan); color: black; border-color: var(--sgx-cyan); box-shadow: 0 0 20px var(--sgx-cyan); }
+
+        .tools-sidebar {
+            position: absolute; top: 50%; right: 20px;
+            transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 10px;
+            z-index: 20; pointer-events: none;
+        }
+        .tool-btn { width: 45px; height: 45px; font-size: 18px; cursor: pointer; pointer-events: auto; transition: all 0.3s ease; }
+
+        /* UI Hidden State */
+        body.ui-hidden .sgx-ui-element { opacity: 0 !important; pointer-events: none !important; }
+        body.ui-hidden .tools-sidebar .tool-btn:not(#btn-toggle-ui) { 
+            opacity: 0; 
+            transform: scale(0.5); 
+            height: 0; 
+            padding: 0; 
+            border: none; 
+            margin-bottom: -10px; 
+            pointer-events: none; 
         }
 
-        /* Cursor Derecho (Rotar, Apuntar, Clic) */
-        #cursor-right { 
+        /* Toast de Sistema */
+        #sgx-toast {
+            position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
+            background: rgba(2, 5, 10, 0.9); border: 1px solid var(--sgx-yellow);
+            color: var(--sgx-yellow); font-family: 'Orbitron', sans-serif;
+            padding: 15px 40px; z-index: 9999; text-transform: uppercase; letter-spacing: 2px;
+            box-shadow: 0 0 30px rgba(253,204,13,0.3); backdrop-filter: blur(10px);
+            transition: top 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+        }
+
+        /* Cursores (Branding SGX) */
+        .cursor-sgx { 
             position: absolute; top: 50%; left: 50%; 
-            width: 12px; height: 12px; 
-            background: rgba(255, 255, 255, 0.8); 
-            border: 2px solid transparent; border-radius: 50%; 
             pointer-events: none; z-index: 100; 
             transform: translate(-50%, -50%); 
-            transition: width 0.15s, height 0.15s, background-color 0.15s, border-color 0.15s, border-radius 0.15s; 
-            box-shadow: 0 0 15px rgba(255,255,255,0.5); display: none; 
+            transition: width 0.15s, height 0.15s, background-color 0.15s, border-color 0.15s; 
+            display: none; 
         }
-        #cursor-right.tracking { display: block; }
-        #cursor-right.pointing { width: 24px; height: 24px; background: transparent; border-color: var(--sgx-yellow); border-width: 3px; box-shadow: 0 0 20px var(--sgx-yellow), inset 0 0 10px var(--sgx-yellow); }
-        #cursor-right.pinching { width: 16px; height: 16px; background: var(--sgx-yellow); border-color: #fff; box-shadow: 0 0 15px var(--sgx-yellow); }
-        #cursor-right.ui-hover { width: 35px; height: 35px; background: rgba(253, 204, 13, 0.3); border-color: var(--sgx-yellow); border-radius: 50%; box-shadow: 0 0 20px var(--sgx-yellow); }
+        #cursor-right.tracking { display: block; width: 12px; height: 12px; background: var(--sgx-yellow); border-radius: 50%; box-shadow: 0 0 15px var(--sgx-yellow); }
+        #cursor-right.pinching { width: 22px; height: 22px; background: transparent; border: 3px solid var(--sgx-yellow); border-radius: 50%; box-shadow: 0 0 25px var(--sgx-yellow); }
+        #cursor-right.pointing { width: 35px; height: 35px; background: transparent; border: 2px dashed var(--sgx-yellow); border-radius: 50%; animation: spin-slow 3s linear infinite; }
+        #cursor-right.ui-hover { width: 50px; height: 50px; background: rgba(253, 204, 13, 0.1); border: 2px solid var(--sgx-yellow); border-radius: 0; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
 
-        /* Cursor Izquierdo (Drone y Panning) */
-        #cursor-left {
-            position: absolute; top: 50%; left: 50%; 
-            width: 12px; height: 12px; 
-            background: rgba(0, 255, 255, 0.8); 
-            border: 2px solid transparent; border-radius: 50%; 
-            pointer-events: none; z-index: 99; 
-            transform: translate(-50%, -50%); 
-            transition: width 0.15s, height 0.15s, background-color 0.15s, border-color 0.15s, border-radius 0.15s; 
-            box-shadow: 0 0 15px rgba(0,255,255,0.5); display: none; 
-        }
-        #cursor-left.tracking { display: block; }
-        #cursor-left.panning { width: 28px; height: 28px; background: rgba(184, 115, 51, 0.9); border-color: #fff; border-radius: 8px; box-shadow: 0 0 20px var(--sgx-copper); }
-        #cursor-left.drone { 
-            width: 50px; height: 50px; background: transparent; 
-            border-color: var(--sgx-cyan); border-width: 2px; border-style: dashed; border-radius: 50%; 
-            box-shadow: 0 0 15px var(--sgx-cyan), inset 0 0 10px var(--sgx-cyan); 
-            animation: spin-slow 4s linear infinite;
-        }
+        #cursor-left.tracking { display: block; width: 12px; height: 12px; background: var(--sgx-cyan); border-radius: 50%; box-shadow: 0 0 15px var(--sgx-cyan); }
+        #cursor-left.panning { width: 28px; height: 28px; background: rgba(184, 115, 51, 0.4); border: 2px solid var(--sgx-copper); border-radius: 0; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); box-shadow: 0 0 20px var(--sgx-copper); }
+        #cursor-left.pointing { width: 35px; height: 35px; background: transparent; border: 2px dashed var(--sgx-cyan); border-radius: 50%; animation: spin-slow 3s linear infinite; }
+        #cursor-left.drone { width: 70px; height: 70px; background: transparent; border: 3px solid var(--sgx-cyan); border-radius: 50%; box-shadow: 0 0 30px var(--sgx-cyan); animation: pulse-glow 2s infinite alternate; }
 
-        .loader { border: 4px solid rgba(253, 204, 13, 0.1); border-left-color: var(--sgx-yellow); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes spin-slow { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+        @keyframes pulse-glow { 0% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.95); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); } }
 
-        /* Efecto de botones en el aire */
-        .hand-clickable { transition: transform 0.15s ease, background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
-        .hand-clickable:active, .hand-clickable.air-active { transform: scale(0.9); box-shadow: 0 0 30px var(--sgx-yellow); background-color: var(--sgx-yellow); border-color: transparent; color: black !important; }
-        
-        /* Sliders */
         input[type=range] { -webkit-appearance: none; background: transparent; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: var(--sgx-cyan); cursor: pointer; margin-top: -5px; box-shadow: 0 0 8px var(--sgx-cyan); }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: var(--sgx-blue); border-radius: 2px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); background: var(--sgx-yellow); cursor: pointer; margin-top: -6px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: var(--sgx-blue); }
+
+        .hand-clickable { transition: transform 0.1s ease; }
+        .hand-clickable:active, .hand-clickable.air-active { transform: scale(0.85); background-color: var(--sgx-yellow) !important; color: black !important; border-color: transparent !important; }
     </style>
 </head>
 <body>
 
+    <div class="holodeck-grid"></div>
+    <div class="vignette"></div>
+
     <!-- Pantalla de Carga -->
-    <div id="loadingScreen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#111111] transition-opacity duration-500">
-        <div class="loader mb-6"></div>
-        <h1 class="text-4xl font-black tracking-widest text-[#FDCC0D]">SGX<span class="text-white">.HIGHVIS</span></h1>
-        <p id="loadingText" class="text-[#888888] mt-3 font-mono text-xs uppercase tracking-widest text-center">Iniciando Sistemas Espaciales<br><span class="text-[#FDCC0D]">Permite el acceso a la cámara para continuar</span></p>
+    <div id="loadingScreen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#02050A] transition-opacity duration-500">
+        <div class="loader mb-6 relative"></div>
+        <h1 class="text-6xl font-black text-[#FDCC0D] mt-8 tracking-widest" style="text-shadow: 0 0 30px rgba(253,204,13,0.5);">SGX<span class="text-white">.HIGHVIS</span></h1>
+        <p id="loadingText" class="text-gray-500 mt-4 text-xs uppercase tracking-[0.3em] text-center leading-relaxed font-tech">
+            Inicializando Sistemas<br>
+            <span class="text-white">Estableciendo Enlace Óptico</span>
+        </p>
     </div>
 
-    <!-- Cargador de Modelos 3D Exclusivo Local (Bypass CORS) -->
-    <div class="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 flex items-center glass-panel rounded-full overflow-hidden shadow-[0_0_15px_rgba(50,82,123,0.5)] border border-[#32527B] h-12 pointer-events-auto">
+    <div id="sgx-toast">SISTEMA OPERATIVO</div>
+
+    <!-- HUD Overview -->
+    <div class="absolute top-6 left-6 w-72 sgx-panel p-4 flex flex-col gap-3 pointer-events-none sgx-ui-element transition-opacity duration-300">
+        <div class="flex justify-between items-center border-b border-[#32527B] pb-2">
+            <h2 class="text-[11px] font-black tracking-widest text-[#FDCC0D]">SYS.STATUS</h2>
+            <span class="text-[9px] px-2 py-1 bg-green-900/40 text-green-400 border border-green-400/30 font-black uppercase font-tech" id="status-global">BOOTING</span>
+        </div>
+        <div class="flex flex-col gap-1.5 text-[9px] uppercase font-bold text-gray-400">
+            <p class="flex justify-between"><span>Core 3D Engine:</span> <span id="status-3d" class="text-white">PROCESANDO</span></p>
+            <p class="flex justify-between"><span>IA Tracker:</span> <span id="status-cam" class="text-white">PENDIENTE</span></p>
+            <div class="w-full h-[1px] bg-[#32527B]/30 my-1"></div>
+            <p class="flex justify-between"><span>NAV. Unit (Left):</span> <span id="status-left" class="text-[#00FFFF]">IDLE</span></p>
+            <p class="flex justify-between"><span>INT. Unit (Right):</span> <span id="status-right" class="text-[#FDCC0D]">IDLE</span></p>
+        </div>
+    </div>
+
+    <!-- Cargador de Modelos -->
+    <div class="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 flex items-center sgx-panel p-1.5 pointer-events-auto h-12 sgx-ui-element transition-opacity duration-300">
+        <input type="text" id="model-url-input" placeholder="SOURCE_URL (.glb)" class="bg-transparent border-none text-white px-3 h-full w-40 md:w-64 outline-none text-[9px] font-black placeholder-gray-700" value="https://static.wixstatic.com/3d/fe81a7_cf1ed4e58d0048efa955f39d347a9466.glb">
+        <button id="btn-load-link" class="hand-clickable sgx-btn h-full px-4 text-[9px] border-l border-r border-[#32527B]/50 rounded-none">LINK</button>
         <input type="file" id="model-file-input" accept=".glb,.gltf" class="hidden" />
-        <button id="btn-load-local" class="hand-clickable bg-transparent hover:bg-[#32527B] text-white font-bold px-6 h-full flex items-center gap-2 transition-colors uppercase text-sm tracking-widest outline-none">
-            <span class="text-xl">📂</span>
-            <span>Cargar Modelo 3D</span>
-        </button>
+        <button id="btn-load-local" class="hand-clickable sgx-btn h-full px-4 text-lg" title="Subir archivo local">📂</button>
     </div>
 
-    <!-- Botones Superiores (Guía & Ajustes) -->
-    <button id="btn-settings" class="hand-clickable absolute top-6 right-20 z-20 w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:bg-[#32527B] cursor-pointer pointer-events-auto shadow-lg border border-[#32527B] text-xl">
-        ⚙️
-    </button>
-    
-    <button id="btn-info" class="hand-clickable absolute top-6 right-6 z-20 w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:bg-[#32527B] cursor-pointer pointer-events-auto shadow-lg border border-[#32527B]">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
-    </button>
+    <!-- Herramientas Laterales -->
+    <div class="tools-sidebar">
+        <button id="btn-toggle-ui" class="hand-clickable tool-btn sgx-btn text-white" title="Toggle Interfaz">👁️</button>
+        <button id="btn-wireframe" class="hand-clickable tool-btn sgx-btn cyan" title="Holo-Matrix Mode">🌐</button>
+        <button id="btn-settings" class="hand-clickable tool-btn sgx-btn yellow" title="Physical Parameters">⚙️</button>
+        <button id="btn-info" class="hand-clickable tool-btn sgx-btn" title="Manual Operativo">❔</button>
+    </div>
 
-    <!-- Panel de Ajustes (Iluminación & PBR) -->
-    <div id="settings-panel" class="absolute top-20 right-6 w-64 glass-panel rounded-xl p-5 flex flex-col gap-4 z-30 pointer-events-none opacity-0 transition-opacity duration-300 border-r-4 border-r-[#00FFFF]">
-        <h2 class="text-sm font-black tracking-wider text-[#00FFFF] border-b border-[#32527B] pb-2">ILUMINACIÓN & ENTORNO</h2>
-        <div class="flex flex-col gap-1">
-            <div class="flex justify-between text-xs text-gray-300"><span>Luz Ambiental</span><span id="val-ambient">1.5</span></div>
-            <input type="range" id="slider-ambient" min="0" max="5" step="0.1" value="1.5" class="w-full pointer-events-auto">
+    <!-- Panel Ajustes -->
+    <div id="settings-panel" class="absolute top-16 right-24 w-72 sgx-panel p-5 flex flex-col gap-4 z-30 pointer-events-none opacity-0 transition-all duration-300 transform translate-x-4 border-r-4 border-r-[#FDCC0D] sgx-ui-element">
+        <h2 class="text-[11px] font-black tracking-widest text-[#FDCC0D] border-b border-[#32527B] pb-2 uppercase">Parámetros Físicos</h2>
+        <div class="flex flex-col gap-1.5">
+            <div class="flex justify-between text-[9px] text-gray-400 font-black uppercase"><span>Ambiencia</span><span id="val-ambient" class="text-white">1.5</span></div>
+            <input type="range" id="slider-ambient" min="0" max="5" step="0.1" value="1.5">
         </div>
-        <div class="flex flex-col gap-1">
-            <div class="flex justify-between text-xs text-gray-300"><span>Luz Direccional</span><span id="val-directional">1.5</span></div>
-            <input type="range" id="slider-directional" min="0" max="5" step="0.1" value="1.5" class="w-full pointer-events-auto">
+        <div class="flex flex-col gap-1.5">
+            <div class="flex justify-between text-[9px] text-gray-400 font-black uppercase"><span>Direccional</span><span id="val-directional" class="text-white">1.5</span></div>
+            <input type="range" id="slider-directional" min="0" max="5" step="0.1" value="1.5">
         </div>
-        <div class="flex flex-col gap-1 mt-2">
-            <div class="flex justify-between text-xs text-gray-300"><span>Reflejos PBR (HDRI)</span></div>
-            <label class="relative inline-flex items-center cursor-pointer pointer-events-auto mt-1">
+        <div class="flex flex-col gap-1.5 mt-1">
+            <div class="flex justify-between text-[9px] text-gray-400 font-black uppercase mb-1"><span>Entorno HDRI</span></div>
+            <label class="relative inline-flex items-center cursor-pointer pointer-events-auto">
                 <input type="checkbox" id="toggle-hdri" class="sr-only peer" checked>
-                <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#00FFFF]"></div>
-                <span class="ml-3 text-xs font-bold text-white" id="val-hdri">ACTIVO</span>
+                <div class="w-10 h-5 bg-gray-800 sgx-btn peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FDCC0D]" style="border-radius:0;"></div>
+                <span class="ml-3 text-[9px] font-black text-white tracking-widest" id="val-hdri">ON</span>
             </label>
         </div>
-        <div class="flex flex-col gap-1 mt-2">
-             <div class="flex justify-between text-xs text-gray-300 mb-1"><span>Color de Fondo</span></div>
-             <div class="flex gap-3 pointer-events-auto">
-                 <button id="bg-dark" class="hand-clickable w-8 h-8 rounded-full bg-[#050505] border-2 border-[#00FFFF] shadow-md"></button>
-                 <button id="bg-gray" class="hand-clickable w-8 h-8 rounded-full bg-gray-500 border-2 border-transparent shadow-md"></button>
-                 <button id="bg-light" class="hand-clickable w-8 h-8 rounded-full bg-gray-200 border-2 border-transparent shadow-md"></button>
-             </div>
+        <div class="flex flex-col gap-1.5 mt-1">
+             <div class="flex justify-between text-[9px] text-gray-400 font-black uppercase mb-1"><span>Holodeck Grid</span></div>
+             <label class="relative inline-flex items-center cursor-pointer pointer-events-auto">
+                <input type="checkbox" id="toggle-grid" class="sr-only peer" checked>
+                <div class="w-10 h-5 bg-gray-800 sgx-btn peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:h-4 after:w-4 after:transition-all peer-checked:bg-[#00FFFF]" style="border-radius:0;"></div>
+                <span class="ml-3 text-[9px] font-black text-white tracking-widest" id="val-grid">ON</span>
+            </label>
         </div>
     </div>
 
-    <!-- Botones Base (Centro / Guardar) -->
-    <div class="absolute bottom-10 left-0 w-full flex justify-center space-x-6 z-20 pointer-events-none">
-        <button id="btn-home" class="hand-clickable glass-panel px-6 py-4 rounded-full text-[#00FFFF] font-bold tracking-widest uppercase text-sm border border-[#00FFFF]/50 shadow-[0_0_20px_rgba(0,255,255,0.2)] pointer-events-auto flex items-center space-x-3 cursor-pointer">
-            <span class="text-xl">🏠</span>
-            <span>Centro</span>
+    <!-- Botones Base -->
+    <div class="absolute bottom-6 left-0 w-full flex justify-center space-x-6 z-20 pointer-events-none sgx-ui-element transition-opacity duration-300">
+        <button id="btn-home" class="hand-clickable sgx-panel px-6 py-3 text-[#00FFFF] bg-[#32527B]/30 font-black tracking-widest uppercase text-[10px] border-2 border-[#00FFFF]/40 shadow-[0_0_15px_rgba(0,255,255,0.2)] pointer-events-auto flex items-center space-x-3 cursor-pointer" style="clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);">
+            <span class="text-lg">🏠</span>
+            <span>ORIGEN ABSOLUTO</span>
         </button>
-        <button id="btn-save-view" class="hand-clickable glass-panel px-6 py-4 rounded-full text-[#FDCC0D] font-bold tracking-widest uppercase text-sm border border-[#FDCC0D]/50 shadow-[0_0_20px_rgba(253,204,13,0.2)] pointer-events-auto flex items-center space-x-3 cursor-pointer">
-            <span class="text-xl">📍</span>
-            <span>Guardar Vista</span>
+        <button id="btn-save-view" class="hand-clickable sgx-panel px-6 py-3 text-[#FDCC0D] bg-[#32527B]/30 font-black tracking-widest uppercase text-[10px] border-2 border-[#FDCC0D]/40 shadow-[0_0_15px_rgba(253,204,13,0.2)] pointer-events-auto flex items-center space-x-3 cursor-pointer" style="clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);">
+            <span class="text-lg">📍</span>
+            <span>ANCLAR VISTA</span>
         </button>
     </div>
 
-    <!-- Modal Guía SGX Highvis -->
-    <div id="gesture-guide" class="absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300 px-4">
-        <div class="glass-panel p-8 rounded-2xl max-w-2xl w-full shadow-2xl transform scale-95 transition-transform duration-300" id="gesture-guide-content">
-            <h2 class="text-3xl font-black text-[#FDCC0D] mb-6 text-center tracking-wide">SGX HIGHVIS PROTOCOL</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Mano Izquierda -->
-                <div class="space-y-4">
-                    <h3 class="text-center font-bold text-[#00FFFF] border-b border-[#00FFFF]/30 pb-2">MANO IZQUIERDA (NAVEGACIÓN)</h3>
-                    <div class="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/10">
+    <div id="gesture-guide" class="absolute inset-0 z-40 flex items-center justify-center bg-black/95 backdrop-blur-2xl opacity-0 pointer-events-none transition-opacity duration-300 px-4 sgx-ui-element">
+            <h2 class="text-4xl font-black text-white mb-10 text-center tracking-[0.2em] border-b border-[#32527B] pb-6 uppercase font-tech">Protocolos <span class="text-[#00FFFF]">SGX</span></h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div class="space-y-6">
+                    <h3 class="text-center font-black text-black bg-[#00FFFF] py-3 px-6 uppercase tracking-widest font-tech">NAV. UNIT (Left)</h3>
+                    <div class="p-5 bg-white/5 border border-[#32527B]/50 flex items-start space-x-4">
                         <span class="text-3xl">🖐️</span>
-                        <div><p class="font-bold text-white text-sm">Vuelo Drone</p><p class="text-xs text-gray-400">Abre la mano para avanzar. <b>Inclina la muñeca</b> a los lados o adelante/atrás para girar suavemente.</p></div>
+                        <div><p class="font-black text-[#00FFFF] text-xs uppercase tracking-widest">DRONE DRIVE</p><p class="text-[10px] text-gray-400 mt-2">Mano abierta: Inclina para pilotar la cámara libremente.</p></div>
                     </div>
-                    <div class="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/10">
+                    <div class="p-5 bg-white/5 border border-[#32527B]/50 flex items-start space-x-4">
                         <span class="text-3xl">🤏</span>
-                        <div><p class="font-bold text-white text-sm">Agarre (Pan)</p><p class="text-xs text-gray-400">Pellizca el vacío para <b>agarrar y arrastrar</b> el modelo en cualquier dirección.</p></div>
+                        <div><p class="font-black text-[#B87333] text-xs uppercase tracking-widest">PAN GRIP</p><p class="text-[10px] text-gray-400 mt-2">Pellizco índice: Agarra y arrastra el modelo.</p></div>
+                    </div>
+                    <div class="p-5 bg-white/5 border border-[#32527B]/50 flex items-start space-x-4">
+                        <span class="text-3xl">🤙</span>
+                        <div><p class="font-black text-white text-xs uppercase tracking-widest">CMD: HOME</p><p class="text-[10px] text-gray-400 mt-2">Pellizco meñique: Regresa instantáneamente al origen.</p></div>
                     </div>
                 </div>
-                <!-- Mano Derecha -->
-                <div class="space-y-4">
-                    <h3 class="text-center font-bold text-[#FDCC0D] border-b border-[#FDCC0D]/30 pb-2">MANO DERECHA (INTERACCIÓN)</h3>
-                    <div class="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/10">
+                <div class="space-y-6">
+                    <h3 class="text-center font-black text-black bg-[#FDCC0D] py-3 px-6 uppercase tracking-widest font-tech">INT. UNIT (Right)</h3>
+                    <div class="p-5 bg-white/5 border border-[#32527B]/50 flex items-start space-x-4">
                         <span class="text-3xl">🤏</span>
-                        <div><p class="font-bold text-white text-sm">Rotar / Clic UI</p><p class="text-xs text-gray-400">Pellizca para <b>rotar</b> el modelo o para presionar los botones (🏠/📍) en pantalla.</p></div>
+                        <div><p class="font-black text-[#FDCC0D] text-xs uppercase tracking-widest">ROTATE / CLICK</p><p class="text-[10px] text-gray-400 mt-2">Pellizco índice: Rota el objeto o pulsa la UI.</p></div>
                     </div>
-                    <div class="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/10">
+                    <div class="p-5 bg-white/5 border border-[#32527B]/50 flex items-start space-x-4">
                         <span class="text-3xl">☝️</span>
-                        <div><p class="font-bold text-white text-sm">Apuntar (Raycast)</p><p class="text-xs text-gray-400">Extiende solo el índice para viajar instantáneamente hacia los Hotspots generados.</p></div>
+                        <div><p class="font-black text-white text-xs uppercase tracking-widest">RAYCAST</p><p class="text-[10px] text-gray-400 mt-2">Ambos índices / Índice der: Salto a Hotspots (📍).</p></div>
+                    </div>
+                    <div class="p-5 bg-white/5 border border-[#32527B]/50 flex items-start space-x-4">
+                        <span class="text-3xl">🤙</span>
+                        <div><p class="font-black text-white text-xs uppercase tracking-widest">CMD: SAVE</p><p class="text-[10px] text-gray-400 mt-2">Pellizco meñique: Anclar nueva vista en tu posición.</p></div>
                     </div>
                 </div>
             </div>
-            <div class="mt-4 flex items-center justify-center space-x-3 p-3 bg-[#32527B]/30 rounded-xl border border-[#32527B]">
-                <span class="text-3xl">🙌</span>
-                <div><p class="font-bold text-white text-sm">Doble Pinch (Zoom)</p><p class="text-xs text-gray-300">Pellizca con ambas manos al mismo tiempo; acércalas o aléjalas para hacer Zoom In/Out.</p></div>
+            <div class="mt-8 bg-white/5 border border-[#32527B]/50 p-5 text-center flex justify-center items-center gap-4">
+                <span class="text-4xl">🙌</span>
+                <div class="text-left"><p class="font-black text-white text-xs uppercase tracking-widest">OPTICAL ZOOM</p><p class="text-[10px] text-gray-400 mt-1">Doble pellizco índice: Acerca/aleja manos para alterar el FOV.</p></div>
             </div>
-            <button id="btn-close-info" class="hand-clickable mt-6 py-4 bg-[#32527B] text-white font-bold rounded-xl hover:bg-opacity-80 transition w-full uppercase text-sm tracking-widest pointer-events-auto">
-                INICIAR SISTEMA
+            <button id="btn-close-info" class="hand-clickable mt-10 py-6 sgx-btn w-full uppercase text-sm font-black tracking-[0.4em] pointer-events-auto border-2 border-[#FDCC0D] text-[#FDCC0D] bg-transparent hover:bg-[#FDCC0D] hover:text-black">
+                INICIAR SECUENCIA
             </button>
         </div>
     </div>
 
-    <!-- HUD Lateral -->
-    <div class="absolute top-6 left-6 w-64 glass-panel rounded-xl p-5 flex flex-col gap-3 z-10 pointer-events-none border-l-4 border-l-[#FDCC0D]">
-        <div class="flex justify-between items-center border-b border-[#32527B] pb-2">
-            <h2 class="text-lg font-black tracking-wider text-[#FDCC0D]">SGX HUD</h2>
-            <span class="text-[10px] px-2 py-1 bg-[#32527B] rounded text-white font-mono" id="status-global">BOOTING</span>
-        </div>
-        <div class="flex flex-col gap-2 text-xs font-mono text-gray-300 mt-1">
-            <p class="flex justify-between"><span>Motor 3D:</span> <span id="status-3d" class="text-yellow-500">Cargando...</span></p>
-            <p class="flex justify-between"><span>Rastreo IA:</span> <span id="status-cam" class="text-yellow-500">Permisos...</span></p>
-            <p class="flex justify-between mt-3 pt-3 border-t border-[#32527B] text-[11px] uppercase font-bold text-[#888888]">
-                <span>Izq (Pan/Dron):</span> <span id="status-left" class="text-[#00FFFF]">IDLE</span>
-            </p>
-            <p class="flex justify-between text-[11px] uppercase font-bold text-[#888888]">
-                <span>Der (Rot/Apun):</span> <span id="status-right" class="text-[#FDCC0D]">IDLE</span>
-            </p>
-        </div>
-    </div>
-
-    <!-- Cursors & Render -->
     <div id="cursor-right" class="cursor-sgx"></div>
     <div id="cursor-left" class="cursor-sgx"></div>
     
-    <video id="videoElement" autoplay playsinline muted></video>
+    <video id="videoElement" class="sgx-ui-element transition-opacity duration-300" autoplay playsinline muted></video>
     <div id="canvasContainer"></div>
 
     <script type="module">
@@ -252,62 +308,12 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
         import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-        // ==========================================
-        // ESTADO GLOBAL & UI
-        // ==========================================
-        const EngineState = {
-            aiReady: false,
-            modelReady: false,
-            check: function() {
-                if (this.aiReady && this.modelReady) {
-                    document.getElementById('status-global').innerText = "EN VIVO";
-                    document.getElementById('status-global').classList.replace('bg-[#32527B]', 'bg-green-600');
-                    const loader = document.getElementById('loadingScreen');
-                    loader.style.opacity = '0';
-                    setTimeout(() => loader.style.display = 'none', 500);
-                }
-            }
-        };
-
-        const ui3D = document.getElementById('status-3d');
-        const uiCam = document.getElementById('status-cam');
-        const uiLeft = document.getElementById('status-left');
-        const uiRight = document.getElementById('status-right');
-        const videoElement = document.getElementById('videoElement');
-
-        // Modal Lógica
-        const modalGuide = document.getElementById('gesture-guide');
-        document.getElementById('btn-info').addEventListener('click', () => {
-            modalGuide.classList.replace('opacity-0', 'opacity-100');
-            modalGuide.classList.replace('pointer-events-none', 'pointer-events-auto');
-        });
-        document.getElementById('btn-close-info').addEventListener('click', () => {
-            modalGuide.classList.replace('opacity-100', 'opacity-0');
-            modalGuide.classList.replace('pointer-events-auto', 'pointer-events-none');
-        });
-
-        // Panel Ajustes Lógica
-        const settingsPanel = document.getElementById('settings-panel');
-        let settingsOpen = false;
-        document.getElementById('btn-settings').addEventListener('click', () => {
-            settingsOpen = !settingsOpen;
-            if(settingsOpen) {
-                settingsPanel.classList.replace('opacity-0', 'opacity-100');
-                settingsPanel.classList.replace('pointer-events-none', 'pointer-events-auto');
-            } else {
-                settingsPanel.classList.replace('opacity-100', 'opacity-0');
-                settingsPanel.classList.replace('pointer-events-auto', 'pointer-events-none');
-            }
-        });
-
-        // ==========================================
-        // UTILIDADES MATEMÁTICAS
-        // ==========================================
+        // --- 1. MATEMÁTICAS ---
         class MathUtils {
             static distanceEuclidean(p1, p2) { return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2) + Math.pow(p1.z - p2.z, 2)); }
             static lerp(start, end, amt) { return (1 - amt) * start + amt * end; }
             static averageLandmarks(historyArray) {
-                if(historyArray.length === 0) return null;
+                if(!historyArray || historyArray.length === 0) return null;
                 const avg = []; const len = historyArray.length;
                 for (let i = 0; i < 21; i++) {
                     let sumX = 0, sumY = 0, sumZ = 0;
@@ -318,9 +324,64 @@
             }
         }
 
-        // ==========================================
-        // GESTOR DE CURSORES
-        // ==========================================
+        // --- 2. GESTIÓN DE VARIABLES GLOBALES DE ESTADO ---
+        let isInputBlocked = false;
+        let droneActive = false;
+        let droneVelocity = { yaw: 0, pitch: 0 };
+        let rightHandState = { mode: 'IDLE', startX: 0, startY: 0 };
+        let leftHandState = { mode: 'IDLE', startX: 0, startY: 0 };
+        let lastRightPinkyTime = 0, lastLeftPinkyTime = 0, droneBase = null, prevPinchDistZoom = null;
+        let leftBuffer = [], rightBuffer = [];
+
+        // --- 3. UI HELPERS ---
+        const showToast = (msg, colorVar = 'var(--sgx-yellow)') => {
+            const t = document.getElementById('sgx-toast');
+            if(!t) return;
+            t.innerText = msg;
+            t.style.borderColor = colorVar;
+            t.style.color = colorVar;
+            t.style.boxShadow = `0 0 25px ${colorVar}80`;
+            t.style.top = '30px';
+            setTimeout(() => { if(t) t.style.top = '-100px'; }, 2500);
+        };
+
+        const EngineState = {
+            aiReady: false, modelReady: false,
+            check: function() {
+                if (this.aiReady && this.modelReady) {
+                    const statusGlobal = document.getElementById('status-global');
+                    if(statusGlobal) {
+                        statusGlobal.innerText = "ONLINE";
+                        statusGlobal.style.backgroundColor = "rgba(22, 163, 74, 0.5)";
+                        statusGlobal.style.color = "white";
+                    }
+                    const loader = document.getElementById('loadingScreen');
+                    if(loader) {
+                        loader.style.opacity = '0';
+                        setTimeout(() => loader.style.display = 'none', 500);
+                    }
+                    showToast("SISTEMA OPERATIVO", "var(--sgx-yellow)");
+                }
+            }
+        };
+
+        const handleUIClick = (cursorManagerObj, uiLabelElement) => {
+            const btn = cursorManagerObj.hoveredBtn;
+            if (btn) {
+                const now = Date.now();
+                if (now - (btn.dataset.lastClick || 0) > 1000) { 
+                    btn.click();
+                    btn.dataset.lastClick = now;
+                    btn.classList.add('air-active');
+                    setTimeout(() => { if (btn) btn.classList.remove('air-active'); }, 300);
+                }
+                if(uiLabelElement) uiLabelElement.innerText = "AIR-CLICK";
+                return true;
+            }
+            return false;
+        };
+
+        // --- 4. GESTOR DE CURSORES ---
         class CursorManager {
             constructor(elementId) {
                 this.element = document.getElementById(elementId);
@@ -334,34 +395,37 @@
                 this.targetY = normalizedY * window.innerHeight;
             }
             setState(state) {
+                if(!this.element) return;
                 this.element.className = 'cursor-sgx tracking'; 
                 if(state) this.element.classList.add(state);
             }
-            hide() { this.element.className = 'cursor-sgx'; this.hoveredBtn = null; }
-            
-            getThreeCoords() {
-                return { x: (this.currentX / window.innerWidth) * 2 - 1, y: -(this.currentY / window.innerHeight) * 2 + 1 };
+            hide() { 
+                if(this.element) this.element.className = 'cursor-sgx'; 
+                this.hoveredBtn = null; 
             }
+            getThreeCoords() { return { x: (this.currentX / window.innerWidth) * 2 - 1, y: -(this.currentY / window.innerHeight) * 2 + 1 }; }
 
             update() {
-                this.currentX = MathUtils.lerp(this.currentX, this.targetX, 0.3);
-                this.currentY = MathUtils.lerp(this.currentY, this.targetY, 0.3);
-                this.element.style.left = `${this.currentX}px`; this.element.style.top = `${this.currentY}px`;
+                this.currentX = MathUtils.lerp(this.currentX, this.targetX, 0.35);
+                this.currentY = MathUtils.lerp(this.currentY, this.targetY, 0.35);
+                if(this.element) {
+                    this.element.style.left = `${this.currentX}px`; 
+                    this.element.style.top = `${this.currentY}px`;
+                }
                 
                 this.hoveredBtn = null;
                 const clickables = document.querySelectorAll('.hand-clickable');
                 clickables.forEach(btn => {
                     const rect = btn.getBoundingClientRect();
-                    const pad = 30; // Hitbox expandido para air-click super suave
-                    if (rect.width > 0 && 
-                        this.currentX >= rect.left - pad && this.currentX <= rect.right + pad &&
+                    const pad = 35; 
+                    if (rect.width > 0 && this.currentX >= rect.left - pad && this.currentX <= rect.right + pad &&
                         this.currentY >= rect.top - pad && this.currentY <= rect.bottom + pad) {
                         this.hoveredBtn = btn;
                     }
                 });
 
-                if (this.hoveredBtn) this.element.classList.add('ui-hover');
-                else this.element.classList.remove('ui-hover');
+                if (this.hoveredBtn && this.element) this.element.classList.add('ui-hover');
+                else if(this.element) this.element.classList.remove('ui-hover');
                 
                 requestAnimationFrame(this.update.bind(this));
             }
@@ -369,13 +433,11 @@
         const cursorRight = new CursorManager('cursor-right');
         const cursorLeft = new CursorManager('cursor-left');
 
-        // ==========================================
-        // MOTOR 3D Y ENTORNO PBR (THREE.JS)
-        // ==========================================
+        // --- 5. ESCENA 3D ---
         class SceneManager {
             constructor() {
                 this.scene = new THREE.Scene();
-                this.scene.background = new THREE.Color(0x050505);
+                this.scene.background = null; 
                 this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
                 this.camera.position.set(0, 1.5, 4.5);
                 
@@ -387,24 +449,25 @@
                 document.getElementById('canvasContainer').appendChild(this.renderer.domElement);
 
                 this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-                this.controls.enableDamping = true; 
-                this.controls.dampingFactor = 0.05;
-                this.controls.enablePan = false; 
-                this.controls.enableZoom = false; 
+                this.controls.enableDamping = true; this.controls.dampingFactor = 0.05;
+                this.controls.enablePan = false; this.controls.enableZoom = false; 
 
                 this.raycaster = new THREE.Raycaster();
                 this.hotspots = [];
+                this.hotspotWrapper = new THREE.Group();
                 this.modelWrapper = new THREE.Group(); 
+                this.loadedModelGroup = new THREE.Group();
+                
+                this.modelWrapper.add(this.loadedModelGroup);
                 this.scene.add(this.modelWrapper);
-
-                // Entorno PBR Realista (Soluciona modelos oscuros)
+                this.scene.add(this.hotspotWrapper);
+                
+                this.isWireframe = false;
                 this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
-                this.pmremGenerator.compileEquirectangularShader();
                 this.roomEnvironment = this.pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
                 this.scene.environment = this.roomEnvironment;
 
                 this.setupLighting();
-
                 window.addEventListener('resize', () => {
                     this.camera.aspect = window.innerWidth / window.innerHeight;
                     this.camera.updateProjectionMatrix();
@@ -415,40 +478,39 @@
             setupLighting() {
                 this.ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
                 this.scene.add(this.ambientLight);
-                
                 this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.5); 
                 this.directionalLight.position.set(5, 10, 7);
                 this.scene.add(this.directionalLight);
-                
-                this.fillLight = new THREE.DirectionalLight(0x32527b, 1.0); 
-                this.fillLight.position.set(-5, 0, -5);
-                this.scene.add(this.fillLight);
+                const fillBlue = new THREE.DirectionalLight(0x32527b, 1.0); fillBlue.position.set(-5, 0, -5); this.scene.add(fillBlue);
+                const fillYellow = new THREE.DirectionalLight(0xfdcc0d, 0.5); fillYellow.position.set(0, -5, 5); this.scene.add(fillYellow);
             }
 
-            // Destrucción profunda absoluta (GPU Memory Cleared)
             clearModel() {
-                if(this.modelWrapper) {
-                    this.modelWrapper.traverse((child) => {
-                        if (child.isMesh) {
-                            if (child.geometry) child.geometry.dispose();
-                            if (child.material) {
-                                if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
-                                else child.material.dispose();
-                            }
+                this.loadedModelGroup.traverse((child) => {
+                    if (child.isMesh) {
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) {
+                            if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                            else child.material.dispose();
                         }
-                    });
-                    this.scene.remove(this.modelWrapper);
+                    }
+                });
+                this.loadedModelGroup.clear();
+                for (let i = this.hotspotWrapper.children.length - 1; i >= 0; i--) {
+                    this.hotspotWrapper.remove(this.hotspotWrapper.children[i]);
                 }
-                this.modelWrapper = new THREE.Group();
-                this.scene.add(this.modelWrapper);
                 this.hotspots = [];
+                this.isWireframe = false;
             }
 
             loadModel(url) {
-                ui3D.innerText = "Procesando..."; ui3D.className = "text-yellow-500 font-bold";
+                const ui3D = document.getElementById('status-3d');
+                if(ui3D) { ui3D.innerText = "SINTETIZANDO..."; ui3D.className = "text-[#FDCC0D] font-bold"; }
                 this.clearModel();
 
                 const loader = new GLTFLoader();
+                loader.setCrossOrigin('anonymous'); 
+                
                 loader.load(url, (gltf) => {
                     const model = gltf.scene;
                     const box = new THREE.Box3().setFromObject(model);
@@ -463,43 +525,77 @@
                     model.scale.setScalar(targetScale);
                     model.position.copy(center).multiplyScalar(-targetScale);
                     
-                    const pivot = new THREE.Group();
-                    pivot.add(model);
-                    this.modelWrapper.add(pivot);
+                    this.loadedModelGroup.add(model);
                     this.modelWrapper.rotation.set(0,0,0);
 
-                    ui3D.innerText = "Operativo"; ui3D.className = "text-green-400 font-bold";
-                    EngineState.modelReady = true;
-                    EngineState.check();
+                    if(ui3D) { ui3D.innerText = "ONLINE"; ui3D.className = "text-green-400 font-bold"; }
+                    EngineState.modelReady = true; EngineState.check();
                     this.createBaseHotspots();
-                    this.resetCamera();
+                    
+                    if(!isInputBlocked) this.resetCamera();
+                    showToast("MODELO CARGADO", "var(--sgx-yellow)");
 
                 }, undefined, (error) => {
-                    ui3D.innerText = "Error Archivo"; ui3D.className = "text-red-500 font-bold";
+                    if(ui3D) { ui3D.innerText = "ERROR ARCHIVO"; ui3D.className = "text-red-500 font-bold"; }
                     console.error("Fallo de carga GLB:", error);
+                    showToast("ERROR DE RED O CORS", "red");
                 });
             }
 
+            toggleWireframe() {
+                this.isWireframe = !this.isWireframe;
+                
+                // Malla Holográfica Cyan con Additive Blending (No afecta sombras/fondos)
+                const wireframeMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00FFFF, 
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.6,
+                    blending: THREE.AdditiveBlending
+                });
+
+                // Aislar el wireframe solo al LoadedModelGroup
+                this.loadedModelGroup.traverse((child) => {
+                    if (child.isMesh) {
+                        if (this.isWireframe) {
+                            if (!child.userData.originalMaterial) child.userData.originalMaterial = child.material;
+                            child.material = wireframeMaterial;
+                        } else {
+                            if (child.userData.originalMaterial) child.material = child.userData.originalMaterial;
+                        }
+                    }
+                });
+                return this.isWireframe;
+            }
+
             createHotspotMesh(position, userData, colorHex) {
-                const geometry = new THREE.SphereGeometry(0.12, 32, 32);
-                const material = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.6, wireframe: true });
+                const geometry = new THREE.SphereGeometry(0.08, 32, 32);
+                const material = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.8 });
                 const mesh = new THREE.Mesh(geometry, material);
                 
+                const ringGeo = new THREE.TorusGeometry(0.14, 0.01, 16, 32);
+                const ringMat = new THREE.MeshBasicMaterial({color: colorHex});
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = Math.PI / 2;
+                mesh.add(ring);
+
                 const hitbox = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), new THREE.MeshBasicMaterial({visible: false}));
                 mesh.add(hitbox);
 
                 mesh.position.copy(position);
                 mesh.userData = userData;
-                this.modelWrapper.add(mesh);
+                
+                // Los hotspots van al wrapper independiente para no contaminarse de wireframe
+                this.hotspotWrapper.add(mesh);
                 this.hotspots.push(mesh);
                 return mesh;
             }
 
             createBaseHotspots() {
                 this.createHotspotMesh(new THREE.Vector3(0, 0.5, 1.5), {
-                    id: "Punto Base", camera_pos: new THREE.Vector3(0, 1.5, 4.5),
+                    id: "ORIGEN", camera_pos: new THREE.Vector3(0, 1.5, 4.5),
                     target: new THREE.Vector3(0, 0, 0), model_rotation: new THREE.Euler(0,0,0)
-                }, 0xfdcc0d); 
+                }, 0xFDCC0D); 
             }
 
             saveDynamicView() {
@@ -509,21 +605,19 @@
                 let hitPointLocal = new THREE.Vector3();
                 if (intersects.length > 0) {
                     hitPointLocal.copy(intersects[0].point);
-                    this.modelWrapper.worldToLocal(hitPointLocal);
                 } else {
                     hitPointLocal.copy(this.controls.target);
-                    this.modelWrapper.worldToLocal(hitPointLocal);
                 }
 
                 const userData = { 
-                    id: `Vista_${this.hotspots.length}`,
+                    id: `NODO_${this.hotspots.length}`,
                     camera_pos: this.camera.position.clone(),
                     target: this.controls.target.clone(),
                     model_rotation: this.modelWrapper.rotation.clone()
                 };
 
                 const mesh = this.createHotspotMesh(hitPointLocal, userData, 0x00FFFF);
-                gsap.from(mesh.scale, {x: 0, y: 0, z: 0, duration: 0.6, ease: "back.out(2)"});
+                gsap.from(mesh.scale, {x: 0, y: 0, z: 0, duration: 0.8, ease: "elastic.out(1.2)"});
                 return userData.id;
             }
 
@@ -537,23 +631,22 @@
                     let hitObject = intersects[0].object;
                     if(hitObject.parent && hitObject.parent.userData.id) hitObject = hitObject.parent;
                     hitObject.material.opacity = 1.0;
-                    hitObject.scale.set(1.3, 1.3, 1.3);
+                    hitObject.scale.set(1.4, 1.4, 1.4);
                     return hitObject.userData; 
                 }
                 return null;
             }
 
-            resetCamera() {
-                gsap.to(this.camera.position, { x: 0, y: 1.5, z: 4.5, duration: 1.0, ease: "power2.out" });
-                gsap.to(this.controls.target, { x: 0, y: 0, z: 0, duration: 1.0, ease: "power2.out" });
+            resetCamera(callback) {
+                gsap.to(this.camera.position, { x: 0, y: 1.5, z: 4.5, duration: 1.2, ease: "power3.out" });
+                gsap.to(this.controls.target, { x: 0, y: 0, z: 0, duration: 1.2, ease: "power3.out", onComplete: callback });
+                gsap.to(this.modelWrapper.rotation, { x: 0, y: 0, z: 0, duration: 1.2, ease: "power3.out" });
             }
 
             render() { this.controls.update(); this.renderer.render(this.scene, this.camera); }
         }
 
-        // ==========================================
-        // CINEMÁTICA GSAP
-        // ==========================================
+        // --- 6. CINEMATIC ENGINE ---
         class CinematicEngine {
             constructor(camera, controls, sceneManager) {
                 this.camera = camera; this.controls = controls; this.sceneManager = sceneManager;
@@ -573,27 +666,17 @@
             }
         }
 
-        // ==========================================
-        // ORQUESTADOR Y EVENTOS DE UI (ILUMINACIÓN & CARGA)
-        // ==========================================
+        // --- 7. INSTANCIACIÓN Y ANIMACIÓN ---
         const sceneManager = new SceneManager();
-        sceneManager.loadModel("https://static.wixstatic.com/3d/fe81a7_cf1ed4e58d0048efa955f39d347a9466.glb");
-        
         const cinematics = new CinematicEngine(sceneManager.camera, sceneManager.controls, sceneManager);
-        let isInputBlocked = false;
-
-        let droneActive = false;
-        let droneBase = null; 
-        let droneVelocity = { yaw: 0, pitch: 0 };
+        
+        sceneManager.loadModel("https://static.wixstatic.com/3d/fe81a7_cf1ed4e58d0048efa955f39d347a9466.glb");
 
         function animate() {
             requestAnimationFrame(animate);
             sceneManager.render();
             
-            if(sceneManager.modelWrapper && !isInputBlocked && uiRight.innerText === "IDLE" && uiLeft.innerText === "IDLE") {
-                 sceneManager.modelWrapper.rotation.y += 0.001; 
-            }
-            
+            // Vuelo Dron (Aislado de Auto-rotación o Cinemáticas)
             if (droneActive && !isInputBlocked) {
                 const forward = new THREE.Vector3();
                 sceneManager.camera.getWorldDirection(forward);
@@ -611,100 +694,114 @@
         }
         animate();
 
-        // Botones Generales
-        const btnSaveView = document.getElementById('btn-save-view');
-        const btnHome = document.getElementById('btn-home');
-        const btnLoadLocal = document.getElementById('btn-load-local');
-        const modelFileInput = document.getElementById('model-file-input');
+        // --- 8. EVENT LISTENERS UI ---
+        const safeAddListener = (id, event, fn) => { const el = document.getElementById(id); if(el) el.addEventListener(event, fn); };
+        
+        safeAddListener('slider-ambient', 'input', (e) => { sceneManager.ambientLight.intensity = parseFloat(e.target.value); const val = document.getElementById('val-ambient'); if(val) val.innerText = e.target.value; });
+        safeAddListener('slider-directional', 'input', (e) => { sceneManager.directionalLight.intensity = parseFloat(e.target.value); const val = document.getElementById('val-directional'); if(val) val.innerText = e.target.value; });
+        safeAddListener('toggle-hdri', 'change', (e) => { sceneManager.scene.environment = e.target.checked ? sceneManager.roomEnvironment : null; const val = document.getElementById('val-hdri'); if(val) val.innerText = e.target.checked ? "ON" : "OFF"; });
+        safeAddListener('toggle-grid', 'change', (e) => { const grid = document.querySelector('.holodeck-grid'); if(grid) grid.style.display = e.target.checked ? 'block' : 'none'; const val = document.getElementById('val-grid'); if(val) val.innerText = e.target.checked ? "ON" : "OFF"; });
 
         const executeSaveView = () => {
+            if(isInputBlocked) return;
             const id = sceneManager.saveDynamicView();
-            ui3D.innerText = `${id} Guardada`;
-            btnSaveView.classList.add('air-active');
-            setTimeout(() => { ui3D.innerText = "Operativo"; btnSaveView.classList.remove('air-active'); }, 1000);
+            showToast(`MARCADOR: ${id}`, "var(--sgx-yellow)");
         };
 
         const executeHome = () => {
-            sceneManager.resetCamera();
-            btnHome.classList.add('air-active');
-            setTimeout(() => { btnHome.classList.remove('air-active'); }, 1000);
+            if(isInputBlocked) return;
+            isInputBlocked = true; // Blindaje contra choques de físicas IA
+            droneActive = false;
+            droneVelocity = { yaw: 0, pitch: 0 };
+            
+            const btn = document.getElementById('btn-home');
+            if(btn) btn.classList.add('air-active');
+            
+            showToast("RETORNO AL ORIGEN", "var(--sgx-cyan)");
+            
+            sceneManager.resetCamera(() => {
+                isInputBlocked = false; 
+                if(btn) btn.classList.remove('air-active');
+            });
         };
 
-        btnSaveView.addEventListener('click', (e) => { e.preventDefault(); executeSaveView(); });
-        btnSaveView.addEventListener('touchstart', (e) => { e.preventDefault(); executeSaveView(); }, {passive: false});
-        btnHome.addEventListener('click', (e) => { e.preventDefault(); executeHome(); });
-        btnHome.addEventListener('touchstart', (e) => { e.preventDefault(); executeHome(); }, {passive: false});
+        const executeWireframe = () => {
+            if(isInputBlocked) return;
+            const isActive = sceneManager.toggleWireframe();
+            showToast(`HOLO-MATRIX: ${isActive ? "ON" : "OFF"}`, "var(--sgx-cyan)");
+        };
+        
+        const executeLoadLink = () => {
+            const el = document.getElementById('model-url-input');
+            if(!el) return;
+            const url = el.value.trim();
+            if(url) {
+                const btn = document.getElementById('btn-load-link');
+                if(btn) btn.classList.add('air-active');
+                sceneManager.loadModel(url);
+                setTimeout(() => { if(btn) btn.classList.remove('air-active'); }, 1000);
+            }
+        };
 
-        // Lógica de Carga Local Segura
-        btnLoadLocal.addEventListener('click', (e) => { 
-            e.preventDefault(); 
-            btnLoadLocal.classList.add('air-active');
-            modelFileInput.click(); 
-            setTimeout(() => btnLoadLocal.classList.remove('air-active'), 1000);
+        safeAddListener('btn-save-view', 'click', (e) => { e.preventDefault(); executeSaveView(); });
+        safeAddListener('btn-home', 'click', (e) => { e.preventDefault(); executeHome(); });
+        safeAddListener('btn-wireframe', 'click', (e) => { e.preventDefault(); executeWireframe(); });
+        safeAddListener('btn-load-link', 'click', (e) => { e.preventDefault(); executeLoadLink(); });
+        safeAddListener('btn-load-local', 'click', (e) => { e.preventDefault(); const el = document.getElementById('model-file-input'); if(el) el.click(); });
+        safeAddListener('model-file-input', 'change', (e) => { if(e.target.files[0]) sceneManager.loadModel(URL.createObjectURL(e.target.files[0])); });
+
+        // Toggle UI
+        safeAddListener('btn-toggle-ui', 'click', (e) => {
+            e.preventDefault();
+            document.body.classList.toggle('ui-hidden');
+            const isHidden = document.body.classList.contains('ui-hidden');
+            showToast(`INTERFAZ ${isHidden ? 'OCULTA' : 'ACTIVA'}`, "var(--sgx-cyan)");
         });
 
-        modelFileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if(file) {
-                // Crea un Local Blob que evade cualquier restricción de CORS
-                const blobURL = URL.createObjectURL(file);
-                sceneManager.loadModel(blobURL);
+        // Paneles UI
+        const modalGuide = document.getElementById('gesture-guide');
+        safeAddListener('btn-info', 'click', () => { if(modalGuide) { modalGuide.classList.replace('opacity-0', 'opacity-100'); modalGuide.classList.replace('pointer-events-none', 'pointer-events-auto'); }});
+        safeAddListener('btn-close-info', 'click', () => { if(modalGuide) { modalGuide.classList.replace('opacity-100', 'opacity-0'); modalGuide.classList.replace('pointer-events-auto', 'pointer-events-none'); }});
+
+        const settingsPanel = document.getElementById('settings-panel');
+        let settingsOpen = false;
+        safeAddListener('btn-settings', 'click', () => {
+            settingsOpen = !settingsOpen;
+            if(settingsOpen && settingsPanel) {
+                settingsPanel.classList.replace('opacity-0', 'opacity-100');
+                settingsPanel.classList.replace('pointer-events-none', 'pointer-events-auto');
+                settingsPanel.classList.replace('translate-x-4', 'translate-x-0');
+            } else if (settingsPanel) {
+                settingsPanel.classList.replace('opacity-100', 'opacity-0');
+                settingsPanel.classList.replace('pointer-events-auto', 'pointer-events-none');
+                settingsPanel.classList.replace('translate-x-0', 'translate-x-4');
             }
         });
 
-        // Controles de Iluminación y Entorno
-        document.getElementById('slider-ambient').addEventListener('input', (e) => {
-            sceneManager.ambientLight.intensity = parseFloat(e.target.value);
-            document.getElementById('val-ambient').innerText = e.target.value;
-        });
-        document.getElementById('slider-directional').addEventListener('input', (e) => {
-            sceneManager.directionalLight.intensity = parseFloat(e.target.value);
-            document.getElementById('val-directional').innerText = e.target.value;
-        });
-        document.getElementById('toggle-hdri').addEventListener('change', (e) => {
-            const active = e.target.checked;
-            sceneManager.scene.environment = active ? sceneManager.roomEnvironment : null;
-            document.getElementById('val-hdri').innerText = active ? "ACTIVO" : "APAGADO";
-        });
-        
-        const setBg = (hex, btn) => {
-            sceneManager.scene.background.setHex(hex);
-            ['bg-dark', 'bg-gray', 'bg-light'].forEach(id => document.getElementById(id).classList.replace('border-[#00FFFF]', 'border-transparent'));
-            btn.classList.replace('border-transparent', 'border-[#00FFFF]');
-        };
-        document.getElementById('bg-dark').addEventListener('click', (e) => setBg(0x050505, e.target));
-        document.getElementById('bg-gray').addEventListener('click', (e) => setBg(0x555555, e.target));
-        document.getElementById('bg-light').addEventListener('click', (e) => setBg(0xe5e7eb, e.target));
-
-
-        // ==========================================
-        // IA: MEDIAPIPE DUAL-WIELD PROTOCOL
-        // ==========================================
-        let leftBuffer = [], rightBuffer = [];
-        let prevPinchDist = null;
-        let rightHandState = { mode: 'IDLE', startX: 0, startY: 0 };
-        let leftHandState = { mode: 'IDLE', startX: 0, startY: 0 };
-
+        // --- 9. IA: JARVIS HYBRID PROTOCOL ---
         const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
         hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
 
         hands.onResults((results) => {
+            const uiCam = document.getElementById('status-cam');
+            const uiLeft = document.getElementById('status-left');
+            const uiRight = document.getElementById('status-right');
+
             if (!EngineState.aiReady) {
                 EngineState.aiReady = true;
-                uiCam.innerText = "Operativo"; uiCam.className = "text-green-400 font-bold";
+                if(uiCam) { uiCam.innerText = "ONLINE"; uiCam.className = "text-[#00FFFF] font-bold"; }
                 EngineState.check();
             }
 
             if (isInputBlocked) return;
             
-            // Asignación Estricta de Handedness (Cero Cruces)
             let rawLeft = null, rawRight = null;
             if (results.multiHandLandmarks && results.multiHandedness) {
                 for (let i = 0; i < results.multiHandLandmarks.length; i++) {
                     const hand = results.multiHandLandmarks[i];
                     const handedness = results.multiHandedness[i].label; 
-                    if (handedness === 'Left') rawRight = hand;  // Física Derecha (Modo Espejo)
-                    if (handedness === 'Right') rawLeft = hand;  // Física Izquierda
+                    if (handedness === 'Left') rawRight = hand;  // Espejo
+                    if (handedness === 'Right') rawLeft = hand;  
                 }
             }
 
@@ -714,8 +811,10 @@
                 if (leftBuffer.length > 5) leftBuffer.shift();
                 smoothLeft = MathUtils.averageLandmarks(leftBuffer);
             } else {
-                leftBuffer = []; droneActive = false; droneBase = null; uiLeft.innerText = "IDLE";
-                cursorLeft.hide(); leftHandState.mode = 'IDLE';
+                leftBuffer.length = 0; 
+                droneActive = false; droneBase = null; 
+                if(uiLeft) uiLeft.innerText = "IDLE"; 
+                cursorLeft.hide(); 
             }
 
             let smoothRight = null;
@@ -724,32 +823,16 @@
                 if (rightBuffer.length > 5) rightBuffer.shift();
                 smoothRight = MathUtils.averageLandmarks(rightBuffer);
             } else {
-                rightBuffer = []; rightHandState.mode = 'IDLE'; uiRight.innerText = "IDLE"; cursorRight.hide();
+                rightBuffer.length = 0; 
+                rightHandState.mode = 'IDLE'; 
+                if(uiRight) uiRight.innerText = "IDLE"; 
+                cursorRight.hide(); 
             }
 
-            if (!smoothLeft && !smoothRight) {
-                sceneManager.hotspots.forEach(h => { h.material.opacity = 0.8; h.scale.set(1,1,1); }); 
-                return;
-            }
+            if (!smoothLeft && !smoothRight) return;
 
             // =====================================
-            // MANEJADOR UNIVERSAL DE CLICS UI (Cero Saltos)
-            // =====================================
-            const handleUIClick = (cursorManagerObj, uiLabelElement) => {
-                if (cursorManagerObj.hoveredBtn) {
-                    const now = Date.now();
-                    if (now - (cursorManagerObj.hoveredBtn.dataset.lastClick || 0) > 1000) { 
-                        cursorManagerObj.hoveredBtn.click();
-                        cursorManagerObj.hoveredBtn.dataset.lastClick = now;
-                        uiLabelElement.innerText = "AIR-CLICK";
-                    }
-                    return true;
-                }
-                return false;
-            };
-
-            // =====================================
-            // 1. DOBLE PINCH (ZOOM)
+            // 1. ZOOM FOV ÓPTICO (DOBLE PINCH)
             // =====================================
             if (smoothLeft && smoothRight) {
                 const pDistL = MathUtils.distanceEuclidean(smoothLeft[4], smoothLeft[8]);
@@ -757,49 +840,68 @@
                 
                 if (pDistL < 0.05 && pDistR < 0.05) {
                     const distHands = MathUtils.distanceEuclidean(smoothLeft[8], smoothRight[8]);
-                    let deltaZoom = prevPinchDist !== null ? distHands - prevPinchDist : 0;
-                    prevPinchDist = distHands;
-                    uiLeft.innerText = "ZOOM"; uiRight.innerText = "ZOOM";
+                    let deltaZoom = prevPinchDistZoom !== null ? distHands - prevPinchDistZoom : 0;
+                    prevPinchDistZoom = distHands;
+                    
+                    if(uiLeft) uiLeft.innerText = "ZOOM IN/OUT"; 
+                    if(uiRight) uiRight.innerText = "ZOOM IN/OUT";
                     cursorRight.setState('pinching'); cursorLeft.hide();
-                    sceneManager.camera.position.z += deltaZoom * 20.0;
+                    
+                    sceneManager.camera.fov -= deltaZoom * 80.0;
+                    sceneManager.camera.fov = THREE.MathUtils.clamp(sceneManager.camera.fov, 15, 100);
+                    sceneManager.camera.updateProjectionMatrix();
+                    
                     droneActive = false; 
-                    return;
+                    return; // Bloquear colisiones de gestos
                 }
             }
-            prevPinchDist = null;
+            prevPinchDistZoom = null;
 
             // =====================================
-            // 2. MANO IZQUIERDA (PANNING Y DRONE)
+            // 2. MANO IZQUIERDA (AZUL/COBRE) - NAV
             // =====================================
             if (smoothLeft) {
-                const idxTip = smoothLeft[8];
-                const screenX = 1 - idxTip.x; const screenY = idxTip.y;
-                const pinchDist = MathUtils.distanceEuclidean(smoothLeft[4], idxTip);
+                const screenX = 1 - smoothLeft[8].x; const screenY = smoothLeft[8].y;
                 
-                const isIdxExt = smoothLeft[8].y < smoothLeft[6].y;
-                const isMidExt = smoothLeft[12].y < smoothLeft[10].y;
-                const isRingExt = smoothLeft[16].y < smoothLeft[14].y;
-                const isPinkyExt = smoothLeft[20].y < smoothLeft[18].y;
+                const dIdxL = MathUtils.distanceEuclidean(smoothLeft[0], smoothLeft[8]);
+                const dMidL = MathUtils.distanceEuclidean(smoothLeft[0], smoothLeft[12]);
+                const dRingL = MathUtils.distanceEuclidean(smoothLeft[0], smoothLeft[16]);
+                const dPinkyL = MathUtils.distanceEuclidean(smoothLeft[0], smoothLeft[20]);
                 
-                const isPinch = pinchDist < 0.05;
-                const isOpen = isIdxExt && isMidExt && isRingExt && isPinkyExt && !isPinch;
+                const pinchDistL = MathUtils.distanceEuclidean(smoothLeft[4], smoothLeft[8]);
+                const pinkyPinchDistL = MathUtils.distanceEuclidean(smoothLeft[4], smoothLeft[20]);
 
-                // Anclaje de cursor al punto medio del pellizco para estabilizar clics
+                const isPinchL = pinchDistL < 0.05;
+                const isPinkyPinchL = pinkyPinchDistL < 0.05 && !isPinchL;
+                const isOpenL = dIdxL > 0.25 && dMidL > 0.25 && dRingL > 0.25 && dPinkyL > 0.25 && !isPinchL && !isPinkyPinchL;
+                const isPointL = dIdxL > 0.25 && dMidL < 0.2 && dRingL < 0.2 && dPinkyL < 0.2 && !isPinchL;
+
                 let targetX = screenX; let targetY = screenY;
-                if (isPinch) {
+                if (isPinchL || isPinkyPinchL) {
                     targetX = 1 - ((smoothLeft[8].x + smoothLeft[4].x) / 2);
                     targetY = (smoothLeft[8].y + smoothLeft[4].y) / 2;
                 }
                 cursorLeft.setTarget(targetX, targetY);
 
-                // A. Pellizco Izquierdo (Clic UI o Panning)
-                if (isPinch) {
+                // A. Pellizco Meñique Izquierdo -> HOME
+                if (isPinkyPinchL) {
+                    cursorLeft.setState('pinching');
+                    if(uiLeft) uiLeft.innerText = "CMD: ORIGEN";
+                    if (Date.now() - lastLeftPinkyTime > 2000) {
+                        lastLeftPinkyTime = Date.now();
+                        executeHome();
+                    }
+                    return;
+                }
+
+                // B. Pellizco Índice Izquierdo -> PANNING
+                if (isPinchL) {
                     cursorLeft.setState('panning');
                     droneActive = false;
                     
                     if (handleUIClick(cursorLeft, uiLeft)) return;
 
-                    uiLeft.innerText = "PANNING"; 
+                    if(uiLeft) uiLeft.innerText = "AGARRE (PAN)"; 
                     if (leftHandState.mode !== 'PINCH_PAN') {
                         leftHandState.mode = 'PINCH_PAN';
                         leftHandState.startX = targetX;
@@ -819,10 +921,12 @@
                         sceneManager.camera.position.addScaledVector(vY, deltaY * panSpeed);
                         sceneManager.controls.target.addScaledVector(vY, deltaY * panSpeed);
                     }
+                    return;
                 } 
-                // B. Mano Abierta Izquierda (Drone)
-                else if (isOpen) {
-                    uiLeft.innerText = "DRONE FLIGHT"; 
+                
+                // C. Mano Abierta Izquierda -> DRONE
+                if (isOpenL) {
+                    if(uiLeft) uiLeft.innerText = "VUELO DRONE"; 
                     cursorLeft.setState('drone');
                     droneActive = true;
                     leftHandState.mode = 'IDLE';
@@ -845,50 +949,72 @@
 
                     droneVelocity.yaw = MathUtils.lerp(droneVelocity.yaw, targetYaw, 0.05);
                     droneVelocity.pitch = MathUtils.lerp(droneVelocity.pitch, targetPitch, 0.05);
+                    return;
                 } 
-                else {
-                    droneActive = false; droneBase = null; 
-                    droneVelocity.yaw = MathUtils.lerp(droneVelocity.yaw, 0, 0.1);
-                    droneVelocity.pitch = MathUtils.lerp(droneVelocity.pitch, 0, 0.1);
-                    uiLeft.innerText = "TRACKING";
+
+                // D. Apuntar Izquierdo
+                if (isPointL) {
+                    if(uiLeft) uiLeft.innerText = "APUNTANDO"; 
+                    cursorLeft.setState('pointing');
                     leftHandState.mode = 'IDLE';
-                    if (!smoothRight) cursorLeft.setState('tracking'); else cursorLeft.hide();
+                    const hitData = sceneManager.checkIntersections(cursorLeft.getThreeCoords());
+                    if (hitData && !cinematics.isAnimating) {
+                        isInputBlocked = true; cursorLeft.hide();
+                        cinematics.flyToTarget(hitData, () => { isInputBlocked = false; });
+                    }
+                    return;
                 }
+
+                if(uiLeft) uiLeft.innerText = "IDLE (TRACKING)";
+                droneActive = false; droneBase = null; 
+                droneVelocity.yaw = MathUtils.lerp(droneVelocity.yaw, 0, 0.1);
+                droneVelocity.pitch = MathUtils.lerp(droneVelocity.pitch, 0, 0.1);
+                leftHandState.mode = 'IDLE';
+                if (!smoothRight) cursorLeft.setState('tracking'); else cursorLeft.hide();
             }
 
             // =====================================
-            // 3. MANO DERECHA (ROTAR, APUNTAR, CLICK)
+            // 3. MANO DERECHA (AMARILLA) - INT.
             // =====================================
             if (smoothRight) {
-                const idxTip = smoothRight[8];
-                const pinchDist = MathUtils.distanceEuclidean(smoothRight[4], idxTip);
+                const screenX = 1 - smoothRight[8].x; const screenY = smoothRight[8].y;
                 
-                const isIdxFold = smoothRight[8].y > smoothRight[6].y;
-                const isMidFold = smoothRight[12].y > smoothRight[10].y;
-                const isRingFold = smoothRight[16].y > smoothRight[14].y;
-                const isPinkyFold = smoothRight[20].y > smoothRight[18].y;
+                const dIdxR = MathUtils.distanceEuclidean(smoothRight[0], smoothRight[8]);
+                const dMidR = MathUtils.distanceEuclidean(smoothRight[0], smoothRight[12]);
+                const dRingR = MathUtils.distanceEuclidean(smoothRight[0], smoothRight[16]);
+                const dPinkyR = MathUtils.distanceEuclidean(smoothRight[0], smoothRight[20]);
+                
+                const pinchDistR = MathUtils.distanceEuclidean(smoothRight[4], smoothRight[8]);
+                const pinkyPinchDistR = MathUtils.distanceEuclidean(smoothRight[4], smoothRight[20]);
 
-                const isPinch = pinchDist < 0.05;
-                const isPoint = !isIdxFold && isMidFold && isRingFold && isPinkyFold && !isPinch;
+                const isPinchR = pinchDistR < 0.05;
+                const isPinkyPinchR = pinkyPinchDistR < 0.05 && !isPinchR;
+                const isPointR = dIdxR > 0.3 && dMidR < 0.25 && dRingR < 0.25 && dPinkyR < 0.25 && !isPinchR;
 
-                const screenX = 1 - smoothRight[8].x; 
-                const screenY = smoothRight[8].y;
-
-                // Estabilización de Cursor Derecho (Cero Saltos al pellizcar)
                 let targetX = screenX; let targetY = screenY;
-                if (isPinch) {
+                if (isPinchR || isPinkyPinchR) {
                     targetX = 1 - ((smoothRight[8].x + smoothRight[4].x) / 2);
                     targetY = (smoothRight[8].y + smoothRight[4].y) / 2;
                 }
                 cursorRight.setTarget(targetX, targetY);
 
-                // A. Pellizco (Air-Click UI o Rotar Modelo)
-                if (isPinch) {
+                // A. Pellizco Meñique Derecho -> GUARDAR VISTA
+                if (isPinkyPinchR) {
+                    cursorRight.setState('pinching'); 
+                    if(uiRight) uiRight.innerText = "CMD: ANCLAR";
+                    if (Date.now() - lastRightPinkyTime > 2000) {
+                        lastRightPinkyTime = Date.now();
+                        executeSaveView();
+                    }
+                    return;
+                }
+
+                // B. Pellizco Índice Derecho -> ROTAR / CLIC
+                if (isPinchR) {
                     cursorRight.setState('pinching');
-                    
                     if (handleUIClick(cursorRight, uiRight)) return;
 
-                    uiRight.innerText = "ROTANDO"; 
+                    if(uiRight) uiRight.innerText = "ROTANDO 3D"; 
                     if (rightHandState.mode !== 'PINCH_ROTATE') {
                         rightHandState.mode = 'PINCH_ROTATE';
                         rightHandState.startX = targetX; 
@@ -906,45 +1032,40 @@
                     }
                     return;
                 }
-
                 rightHandState.mode = 'IDLE';
 
-                // B. Apuntar (Raycast a Hotspots)
-                if (isPoint) {
-                    uiRight.innerText = "APUNTANDO"; cursorRight.setState('pointing');
-                    const smoothCoords = cursorRight.getThreeCoords();
-                    const hitData = sceneManager.checkIntersections(smoothCoords);
-                    
+                // C. Apuntar Derecho (Raycast Principal)
+                if (isPointR) {
+                    if(uiRight) uiRight.innerText = "APUNTANDO"; 
+                    cursorRight.setState('pointing');
+                    const hitData = sceneManager.checkIntersections(cursorRight.getThreeCoords());
                     if (hitData && !cinematics.isAnimating) {
-                        uiRight.innerText = `VIAJANDO`;
                         isInputBlocked = true; cursorRight.hide();
-                        sceneManager.hotspots.forEach(h => { h.material.opacity = 0.5; h.scale.set(1,1,1); }); 
-                        cinematics.flyToTarget(hitData, () => { isInputBlocked = false; uiRight.innerText = "LLEGADA"; });
+                        cinematics.flyToTarget(hitData, () => { isInputBlocked = false; });
                     }
                     return;
                 }
                 
-                uiRight.innerText = "TRACKING";
-                if(!smoothLeft || !droneActive) cursorRight.setState('tracking');
+                if(uiRight) uiRight.innerText = "IDLE (TRACKING)";
+                cursorRight.setState('tracking');
             }
         });
 
-        // Inicialización NATIVA de Cámara
+        // --- 10. INICIO DE CÁMARA NATIVA ---
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: {ideal: 1280}, height: {ideal: 720} } })
         .then((stream) => {
-            videoElement.srcObject = stream;
-            const cameraFeed = new Camera(videoElement, {
-                onFrame: async () => { await hands.send({image: videoElement}); },
-                width: 1280, height: 720
-            });
-            cameraFeed.start();
+            const videoEl = document.getElementById('videoElement');
+            if(videoEl) {
+                videoEl.srcObject = stream;
+                new Camera(videoEl, { onFrame: async () => { await hands.send({image: videoEl}); }, width: 1280, height: 720 }).start();
+            }
         }).catch(err => {
-            uiCam.innerText = "Denegada"; uiCam.className = "text-red-500 font-bold";
-            document.getElementById('loadingText').innerHTML = "<span class='text-red-500'>Error de Hardware. Permite acceso a cámara.</span>";
+            const uiCam = document.getElementById('status-cam');
+            const loadText = document.getElementById('loadingText');
+            if(uiCam) { uiCam.innerText = "ERROR"; uiCam.className = "text-red-500 font-bold"; }
+            if(loadText) loadText.innerHTML = "<span class='text-red-500'>Error Crítico. Permite acceso a la cámara.</span>";
         });
 
     </script>
 </body>
 </html>
-
-
